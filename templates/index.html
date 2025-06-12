@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Assistant IA</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f7fa;
+      margin: 0;
+      padding: 0;
+    }
+
+    .chat-container {
+      max-width: 800px;
+      margin: 50px auto;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+      height: 80vh;
+    }
+
+    .chat-header {
+      background-color: #007bff;
+      color: white;
+      padding: 15px;
+      text-align: center;
+      font-size: 1.2em;
+      border-top-left-radius: 8px;
+      border-top-right-radius: 8px;
+    }
+
+    .chat-messages {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .message {
+      padding: 10px 15px;
+      border-radius: 20px;
+      max-width: 70%;
+      line-height: 1.4;
+    }
+
+    .user-message {
+      align-self: flex-end;
+      background-color: #dc3545;
+      color: white;
+      border-bottom-right-radius: 0;
+    }
+
+    .bot-message {
+      align-self: flex-start;
+      background-color: #e9ecef;
+      color: #333;
+      border-bottom-left-radius: 0;
+    }
+
+    .chat-input {
+      display: flex;
+      border-top: 1px solid #ddd;
+    }
+
+    .chat-input input {
+      flex: 1;
+      padding: 15px;
+      border: none;
+      font-size: 1em;
+    }
+
+    .chat-input button {
+      background-color: #28a745;
+      color: white;
+      border: none;
+      padding: 15px;
+      cursor: pointer;
+    }
+
+    .chat-input button:hover {
+      background-color: #218838;
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <div class="chat-header">Assistant NC</div>
+    <div class="chat-messages" id="chatMessages">
+      <div class="bot-message">Bonjour ! Posez-moi vos questions.</div>
+    </div>
+    <form class="chat-input" id="chatForm">
+      <input type="text" id="userInput" placeholder="Tapez votre question ici..." autocomplete="off" required />
+      <button type="submit">Envoyer</button>
+    </form>
+  </div>
+
+  <script>
+    const form = document.getElementById('chatForm');
+    const input = document.getElementById('userInput');
+    const messagesDiv = document.getElementById('chatMessages');
+
+    async function sendMessage(text) {
+      // Message utilisateur
+      const userMsg = document.createElement('div');
+      userMsg.className = 'message user-message';
+      userMsg.textContent = text;
+      messagesDiv.appendChild(userMsg);
+
+      // Effacer l'input
+      input.value = '';
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+      // Appel à l'API FastAPI
+      const response = await fetch('/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ query: text })
+      });
+
+      const data = await response.json();
+
+      // Réponse du bot
+      const botMsg = document.createElement('div');
+      botMsg.className = 'message bot-message';
+      botMsg.textContent = data.response;
+      messagesDiv.appendChild(botMsg);
+
+      // Affichage des sources (optionnel)
+      if (data.sources && data.sources.length > 0) {
+    const sourceMsg = document.createElement('div');
+    sourceMsg.className = 'message bot-message';
+    sourceMsg.style.fontSize = '0.8em';
+    sourceMsg.style.color = '#666';
+    
+    // Affiche les numéros de NC au lieu du chemin
+    sourceMsg.innerHTML = "<strong>Sources :</strong><ul>" +
+        data.sources.map(s => `<li>${s.nc_id}</li>`).join('') +
+        "</ul>";
+    
+    messagesDiv.appendChild(sourceMsg);
+}
+
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      const text = input.value.trim();
+      if (text !== '') {
+        sendMessage(text);
+      }
+    });
+  </script>
+</body>
+</html>
