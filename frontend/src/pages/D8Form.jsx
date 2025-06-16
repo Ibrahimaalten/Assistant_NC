@@ -7,6 +7,7 @@ import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 
 // Importer le nouveau composant
 import TeamRecognition from '../components/8D/TeamRecognition'; // Ajuster le chemin si nécessaire
+import { useForm8D } from "../contexts/Form8DContext";
 
 // --- Props Attendues ---
 // activeTabIndex, totalTabs, onNavigate, tabKeyLabel: Navigation
@@ -15,13 +16,11 @@ import TeamRecognition from '../components/8D/TeamRecognition'; // Ajuster le ch
 // ----------------------
 
 function D8Form({
-    activeTabIndex,
-    totalTabs,
-    onNavigate,
     tabKeyLabel,
-    teamData = [], // Prop pour les données de l'équipe
+    teamData = [],
     onSaveD8
 }) {
+    const { setCurrentStepKey, currentStepKey } = useForm8D();
 
     // --- DONNÉES D'EXEMPLE POUR L'ÉQUIPE (si teamData n'est pas fourni) ---
     const sampleTeamData = [
@@ -116,9 +115,25 @@ function D8Form({
     }
   };
 
-  // --- Navigation ---
-  const handlePrevious = () => onNavigate(activeTabIndex - 1);
+    const stepsOrder = [
+      'd0_initialisation',
+      'd1_team',
+      'd2_problem',
+      'd3_containment',
+      'd4_rootcause',
+      'd5_correctiveactions',
+      'd6_implementvalidate',
+      'd7_preventrecurrence',
+      'd8_congratulate'
+    ];
+    const currentIndex = stepsOrder.indexOf(currentStepKey);
 
+    const handlePrevious = () => {
+      if (currentIndex > 0) {
+        setCurrentStepKey(stepsOrder[currentIndex - 1]);
+        window.scrollTo(0, 0);
+      }
+    };
 
   // --- Rendu ---
   return (
@@ -162,7 +177,7 @@ function D8Form({
         {/* --- Zone des Boutons --- */}
         <Grid item xs={12}>
            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 3 }}>
-              <Button variant="outlined" startIcon={<NavigateBeforeIcon />} onClick={handlePrevious} disabled={activeTabIndex === 0} >
+              <Button variant="outlined" startIcon={<NavigateBeforeIcon />} onClick={handlePrevious} disabled={currentIndex === 0} >
                 Précédent
               </Button>
               <Button variant="contained" color="success" startIcon={<CheckCircleOutlineIcon />} onClick={handleSaveAndClose} >

@@ -1,0 +1,17 @@
+# Backend Python requirements for 8D Langchain project
+fastapi
+uvicorn
+typing-extensions
+pydantic
+langchain
+langchain-community
+langchain-core
+langchain-ollama
+chromadb
+ollama
+python-dotenv
+# Pour le streaming et l'API
+httpx
+# Pour le support CSV éventuel
+pandas
+# Pour le frontend, requirements séparés (voir package.json)

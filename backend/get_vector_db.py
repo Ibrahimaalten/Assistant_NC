@@ -1,7 +1,7 @@
 from langchain_ollama.embeddings import OllamaEmbeddings
-from langchain_community.vectorstores import Chroma
+from langchain_chroma import Chroma
 # Configuration
-DB_DIR = "./chroma_db"
+DB_DIR = "C:/Users/lrodembourg/Documents/Test_Langchain/chroma_db"
 ollama_endpoint = "http://localhost:11434"
 def get_vectorstore():
     embedding_model = OllamaEmbeddings(base_url=ollama_endpoint, model="snowflake-arctic-embed2")

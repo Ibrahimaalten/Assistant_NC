@@ -5,13 +5,18 @@ import { Select, MenuItem, FormControl, InputLabel, Box } from '@mui/material';
 const RootCauseSelector = ({ rootCauses = [], selectedCause, onSelectCause }) => {
 
   const handleChange = (event) => {
-    onSelectCause(event.target.value);
+    if (typeof onSelectCause === 'function') {
+      onSelectCause(event.target.value);
+    }
   };
 
   // N'affiche rien s'il n'y a pas de causes racines à sélectionner
   if (rootCauses.length === 0) {
     return null;
   }
+
+  // Correction : la valeur doit être '' ou une valeur du tableau
+  const value = rootCauses.includes(selectedCause) ? selectedCause : '';
 
   return (
     <Box sx={{ minWidth: 240, mt: 1 }}>
@@ -20,12 +25,14 @@ const RootCauseSelector = ({ rootCauses = [], selectedCause, onSelectCause }) =>
         <Select
           labelId="root-cause-select-label"
           id="root-cause-select"
-          value={selectedCause} // Important: doit correspondre à une valeur existante ou ''
+          value={value} // Important: doit correspondre à une valeur existante ou ''
           label="Cause Racine Identifiée" // Doit correspondre à InputLabel
           onChange={handleChange}
         >
           {/* Option pour désélectionner ou pour inviter à choisir */}
-          {/* <MenuItem value="" disabled={!selectedCause}>-- Sélectionnez --</MenuItem> */}
+          <MenuItem value="">
+            -- Sélectionnez --
+          </MenuItem>
 
           {rootCauses.map((cause) => (
             <MenuItem key={cause} value={cause} title={cause}>

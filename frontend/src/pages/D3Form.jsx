@@ -1,6 +1,6 @@
 // src/pages/D3Form.jsx (ou le nom que vous utilisez)
 import React, { useState } from 'react'; // Garder useState pour localErrors
-import { Box, Button, Typography, Grid, FormHelperText } from '@mui/material';
+import { Box, Button, Typography, Grid, FormHelperText, Paper, Snackbar, Alert } from '@mui/material';
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import SaveIcon from '@mui/icons-material/Save';
@@ -10,19 +10,6 @@ import GestionActions3D from '../components/3D/GestionActionsCorrectives'; // As
 
 // Importer le hook du contexte
 import { useForm8D } from '../contexts/Form8DContext'; // Assurez-vous que le chemin est correct
-
-// L'ordre des étapes doit être cohérent
-const stepsOrder = [
-  'd0_initialisation',
-  'd1_team',
-  'd2_problem',
-  'd3_containment', // Notre étape actuelle
-  'd4_rootcause',
-  'd5_correctiveactions',
-  'd6_implementvalidate',
-  'd7_preventrecurrence',
-  'd8_congratulate'
-];
 
 function D3Form({ tabKeyLabel = "D3" }) { // tabKeyLabel est passé par App.jsx
   const {
@@ -47,6 +34,9 @@ function D3Form({ tabKeyLabel = "D3" }) { // tabKeyLabel est passé par App.jsx
 
   // État local pour les erreurs de validation de cette page
   const [localErrors, setLocalErrors] = useState({});
+
+  // État pour le feedback de sauvegarde
+  const [saveFeedback, setSaveFeedback] = useState({ open: false, message: '', severity: 'success' });
 
   // --- SUPPRIMÉ: État local pour formData ---
   // const [formData, setFormData] = useState({ actions3D: [] }); // N'est plus nécessaire
@@ -90,12 +80,28 @@ function D3Form({ tabKeyLabel = "D3" }) { // tabKeyLabel est passé par App.jsx
 
   const handleSave = () => {
     if (validatePage()) {
+      setSaveFeedback({ open: true, message: `Données ${tabKeyLabel} sauvegardées !`, severity: 'success' });
       console.log(`Données ${tabKeyLabel} validées (issues du contexte):`, sectionData);
+      // TODO: Ajoutez ici la logique de sauvegarde réelle
       alert(`Données ${tabKeyLabel} prêtes pour la sauvegarde (simulation) !`);
     } else {
       console.log(`Validation ${tabKeyLabel} échouée`, localErrors);
     }
   };
+
+  const handleCloseSnackbar = () => setSaveFeedback(prev => ({ ...prev, open: false }));
+
+  const stepsOrder = [
+    'd0_initialisation',
+    'd1_team',
+    'd2_problem',
+    'd3_containment',
+    'd4_rootcause',
+    'd5_correctiveactions',
+    'd6_implementvalidate',
+    'd7_preventrecurrence',
+    'd8_congratulate'
+  ];
 
   const currentIndex = stepsOrder.indexOf(currentStepKey);
 
@@ -107,94 +113,66 @@ function D3Form({ tabKeyLabel = "D3" }) { // tabKeyLabel est passé par App.jsx
   };
 
   const handleNext = () => {
-    if (validatePage()) {
-      if (currentIndex < stepsOrder.length - 1) {
-        setCurrentStepKey(stepsOrder[currentIndex + 1]);
-        window.scrollTo(0, 0);
-      }
-    } else {
-      console.log("Validation D3 échouée, impossible de passer à l'étape suivante.");
+    if (currentIndex < stepsOrder.length - 1) {
+      setCurrentStepKey(stepsOrder[currentIndex + 1]);
+      window.scrollTo(0, 0);
     }
   };
 
   return (
-    <Box component="form" noValidate autoComplete="off" sx={{ p: 0 }} onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
-      <Typography variant="h5" component="h2" gutterBottom sx={{ mb: 3 }}>
-        D3 - Actions Immédiates de Confinement
-        {tabKeyLabel && <Typography variant="caption" sx={{ ml:1 }}>({tabKeyLabel})</Typography>}
+    <Box component="div" sx={{ p: 2, maxWidth: 900, margin: '0 auto' }}>
+      <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
+        D3 – Définition et Application des Actions de Contention
       </Typography>
-      <Grid container spacing={3}>
-        <Grid item xs={12}>
-          {/* Utilisation du composant GestionActions3D */}
-          <GestionActions3D
-            actions={actionsListValue}         // Passer le tableau d'actions du contexte
-            onActionsChange={handleActionsChange} // Passer le gestionnaire pour mettre à jour ce tableau
-            error={!!localErrors.actions3D}     // Passer l'état d'erreur pour ce groupe/composant
-            helperText={localErrors.actions3D || ''} // Passer le message d'erreur
-            // Vous pourriez avoir besoin de passer d'autres props à GestionActions3D
-            // selon sa conception (ex: des labels spécifiques, des options)
-          />
-          {/* L'affichage de l'erreur est maintenant géré DANS GestionActions3D ou juste en dessous si vous préférez */}
-          {/* {localErrors.actions3D && !GestionActions3D gère son propre helperText (
-            <FormHelperText error sx={{ mt: 1, ml: 1 }}>
-              {localErrors.actions3D}
-            </FormHelperText>
-          )} */}
-        </Grid>
-
-        {/* Si vous avez d'autres champs spécifiques à D3, ajoutez-les ici */}
-        {/* Exemple:
-        <Grid item xs={12} sm={6}>
-           <TextField
-            id="dateVerificationEfficacite-d3"
-            name="dateVerificationEfficacite"
-            label="Date Vérification Efficacité ICA"
-            type="date"
-            fullWidth
-            variant="outlined"
-            InputLabelProps={{ shrink: true }}
-            value={sectionData.dateVerificationEfficacite || ''}
-            onChange={handleOtherD3FieldChange}
-            error={!!localErrors.dateVerificationEfficacite}
-            helperText={localErrors.dateVerificationEfficacite || ''}
-           />
-        </Grid>
-        */}
-
-        {/* --- Zone des Boutons --- */}
-        <Grid item xs={12}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 4, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
-            <Button
-              variant="outlined"
-              startIcon={<NavigateBeforeIcon />}
-              onClick={handlePrevious}
-              disabled={currentIndex === 0}
-            >
-              Précédent
-            </Button>
-            <Box>
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<SaveIcon />}
-                onClick={handleSave} // ou type="submit"
-                sx={{ mr: 1 }}
-              >
-                Sauvegarder {tabKeyLabel}
-              </Button>
-              <Button
-                variant="contained"
-                color="secondary"
-                endIcon={<NavigateNextIcon />}
-                onClick={handleNext}
-                disabled={currentIndex === stepsOrder.length - 1}
-              >
-                Suivant
-              </Button>
-            </Box>
-          </Box>
-        </Grid>
-      </Grid>
+      <Paper elevation={2} sx={{ p: 2, mb: 3 }}>
+        <Typography variant="subtitle1" sx={{ mb: 1 }}>
+          Actions de Contention à mettre en place immédiatement
+        </Typography>
+        <GestionActions3D
+          actions={actionsListValue}         // Passer le tableau d'actions du contexte
+          onActionsChange={handleActionsChange} // Passer le gestionnaire pour mettre à jour ce tableau
+          error={!!localErrors.actions3D}     // Passer l'état d'erreur pour ce groupe/composant
+          helperText={localErrors.actions3D || ''} // Passer le message d'erreur
+        />
+      </Paper>
+      {/* Zone de feedback utilisateur */}
+      <Snackbar open={saveFeedback.open} autoHideDuration={3000} onClose={handleCloseSnackbar} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+        <Alert onClose={handleCloseSnackbar} severity={saveFeedback.severity} sx={{ width: '100%' }}>
+          {saveFeedback.message}
+        </Alert>
+      </Snackbar>
+      {/* Barre de navigation et sauvegarde */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 3 }}>
+        <Button
+          variant="outlined"
+          startIcon={<NavigateBeforeIcon />}
+          onClick={handlePrevious}
+          disabled={currentIndex === 0}
+        >
+          Précédent
+        </Button>
+        <Box>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<SaveIcon />}
+            onClick={handleSave}
+            sx={{ mr: 1 }}
+          >
+            Sauvegarder {tabKeyLabel}
+          </Button>
+          <Button
+            variant="contained"
+            endIcon={<NavigateNextIcon />}
+            onClick={handleNext}
+            disabled={currentIndex === stepsOrder.length - 1}
+          >
+            Suivant
+          </Button>
+        </Box>
+      </Box>
+      {/* Préparation pour ChatAssistant (décommenter pour intégrer) */}
+      {/* <Box sx={{ mt: 4 }}><ChatAssistant /></Box> */}
     </Box>
   );
 }

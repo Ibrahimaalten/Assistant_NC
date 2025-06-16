@@ -5,25 +5,51 @@ const Form8DContext = createContext();
 export const useForm8D = () => useContext(Form8DContext);
 
 const initialForm8DData = {
-    d0_initialisation :{referenceNC: '',
-    dateDetection: new Date().toISOString().slice(0, 10),
-    dateCreation: new Date().toISOString().slice(0, 10), // Date du jour par défaut
-    produitRef: '',
-    LieuDetection: '',
-    detectePar: '',
-    descriptionInitiale: '',
-    Criticite: '',
-    FonctionCrea:'',  },
-  d1_team: { membresEquipe: '', chefEquipe: '',sponsor:'' },
+  d0_initialisation :{referenceNC: '',
+  dateDetection: new Date().toISOString().slice(0, 10),
+  dateCreation: new Date().toISOString().slice(0, 10), // Date du jour par défaut
+  produitRef: '',
+  LieuDetection: '',
+  detectePar: '',
+  descriptionInitiale: '',
+  Criticite: '',
+  FonctionCrea:'',  },
+  d1_team: { membresEquipe: [], chefEquipe: { prenom: '', nom: '', support: '' }, Sponsor: '' },
   d2_problem: { descriptionDetaillee: {
     qui: '', quoi: '', ou: '', quand: '', comment: '', combien: '', pourquoi: ''
   } },
-  d3_containment:{},
-  d4_rootcause:{},
-  d5_correctiveactions:{},
-  d6_implementvalidate:{},
-  d7_preventrecurrence:{},
-  d8_congratulate: { team_recognition: '' },
+  d3_containment: { actions3D: [] },
+  d4_rootcause: {
+    ishikawaData: {
+      Manpower: { causes: [], measurable: false, category: "Main d'œuvre" },
+      Machine: { causes: [], measurable: false, category: 'Machine' },
+      Method: { causes: [], measurable: false, category: 'Méthode' },
+      Material: { causes: [], measurable: false, category: 'Matière' },
+      Milieu: { causes: [], measurable: false, category: 'Milieu' },
+    },
+    fiveWhysData: {},
+  },
+  d5_correctiveactions: {
+    correctiveActionsData: {},
+  },
+  d6_implementvalidate: {
+    implementedActions: {},
+    validationResults: '',
+    surveillancePlan: '',
+  },
+  d7_preventrecurrence: {
+    selectedPreventiveCauses: [],
+    preventiveActions: {},
+    documentationUpdates: '',
+    systemicChanges: '',
+  },
+  d8_congratulate: {
+    team_recognition: '',
+    resumeResultats: '',
+    leconsApprises: '',
+    dateCloture: new Date().toISOString().slice(0, 10),
+    teamAcknowledged: [],
+  },
   currentStepKey: 'd0_initialisation', // Clé pour identifier la section/page active
 };
 

@@ -115,14 +115,9 @@ function D0Form({ tabKeyLabel }) {
   };
 
   const handleNext = () => {
-    if (validatePage()) { // Valider avant de passer à l'étape suivante
-      if (currentIndex < stepsOrder.length - 1) {
-        setCurrentStepKey(stepsOrder[currentIndex + 1]);
-        window.scrollTo(0,0); // Optionnel: remonter en haut de page
-      }
-    } else {
-      // Les erreurs s'affichent via helperText, une alerte est redondante.
-      console.log("Validation D0 échouée, impossible de passer à l'étape suivante.");
+    if (currentIndex < stepsOrder.length - 1) {
+      setCurrentStepKey(stepsOrder[currentIndex + 1]);
+      window.scrollTo(0,0);
     }
   };
 

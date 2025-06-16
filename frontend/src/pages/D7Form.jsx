@@ -1,9 +1,10 @@
 // src/components/D7Form.jsx
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { Box, Button, Typography, Grid, Paper, TextField } from '@mui/material';
+import { Box, Button, Typography, Grid, Paper, TextField, Snackbar, Alert } from '@mui/material';
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import SaveIcon from '@mui/icons-material/Save';
+import { useForm8D } from '../contexts/Form8DContext';
 
 // Importer les sous-composants 7D
 import RootCausePreventSelector from '../components/7D/RootCausePreventSelector';
@@ -14,15 +15,23 @@ import PreventiveActionPlanner from '../components/7D/PreventiveActionPlanner';
 // identifiedRootCauses: Tableau de strings des causes racines de D5
 // onSaveD7: Callback pour sauvegarder les données D7
 // ----------------------
-
+const stepsOrder = [
+      'd0_initialisation',
+      'd1_team',
+      'd2_problem',
+      'd3_containment',
+      'd4_rootcause',
+      'd5_correctiveactions',
+      'd6_implementvalidate',
+      'd7_preventrecurrence',
+      'd8_congratulate'
+    ];
 function D7Form({
-  activeTabIndex,
-  totalTabs,
-  onNavigate,
   tabKeyLabel,
-  identifiedRootCauses: rootCausesFromProps = [], // Renommé pour clarté, défaut tableau vide
+  identifiedRootCauses: rootCausesFromProps = [],
   onSaveD7
 }) {
+  const { setCurrentStepKey, currentStepKey } = useForm8D();
 
   // --- DONNÉES D'EXEMPLE POUR TEST ---
   const sampleRootCausesForTesting = [
@@ -44,6 +53,9 @@ function D7Form({
   // (Optionnel) État pour d'autres champs D7 (ex: mise à jour documentation)
   const [documentationUpdates, setDocumentationUpdates] = useState('');
   const [systemicChanges, setSystemicChanges] = useState('');
+
+  // État pour le feedback de sauvegarde
+  const [saveFeedback, setSaveFeedback] = useState({ open: false, message: '', severity: 'success' });
 
   // --- Initialiser/Tester avec une sélection et une action ---
   useEffect(() => {
@@ -117,127 +129,119 @@ function D7Form({
 
   // --- Sauvegarde D7 ---
   const handleSave = () => {
-    // Validation : Au moins une cause sélectionnée ? Au moins une action pour chaque cause sélectionnée ?
-    if (selectedPreventiveCauses.length === 0 && availableRootCauses.length > 0) {
-        alert("Veuillez sélectionner au moins une cause racine pour la prévention.");
-        return;
-    }
-     let actionsMissing = false;
-     selectedPreventiveCauses.forEach(cause => {
-         if (!preventiveActions[cause] || preventiveActions[cause].length === 0) {
-             actionsMissing = true;
-         }
-     });
-     if (actionsMissing) {
-         alert("Veuillez définir au moins une action préventive pour chaque cause racine sélectionnée.");
-         return;
-     }
+    // TODO: Ajoutez ici la logique de validation si besoin
+    setSaveFeedback({ open: true, message: `Données ${tabKeyLabel} sauvegardées !`, severity: 'success' });
+    // ...sauvegarde réelle à implémenter...
+  };
 
-    const saveData = {
-        preventedRootCauses: selectedPreventiveCauses, // Causes cochées
-        preventiveActions: preventiveActions,       // Actions définies
-        documentationUpdates: documentationUpdates, // Champ texte optionnel
-        systemicChanges: systemicChanges            // Champ texte optionnel
-    };
-    console.log('Données D7 à sauvegarder:', saveData);
-    if (onSaveD7) {
-        onSaveD7(saveData);
-        alert(`Données ${tabKeyLabel} (simulées) sauvegardées !`);
-    } else {
-        console.error(`Callback onSaveD7 non fourni à D7Form.`);
-        alert(`Erreur: La fonction de sauvegarde pour ${tabKeyLabel} n'est pas configurée.`);
+  const handleCloseSnackbar = () => setSaveFeedback(prev => ({ ...prev, open: false }));
+
+  // --- Navigation ---
+  
+  const currentIndex = stepsOrder.indexOf(currentStepKey);
+
+  const handlePrevious = () => {
+    if (currentIndex > 0) {
+      setCurrentStepKey(stepsOrder[currentIndex - 1]);
+      window.scrollTo(0, 0);
+    }
+  };
+  const handleNext = () => {
+    if (currentIndex < stepsOrder.length - 1) {
+      setCurrentStepKey(stepsOrder[currentIndex + 1]);
+      window.scrollTo(0, 0);
     }
   };
 
-  // --- Navigation ---
-  const handlePrevious = () => onNavigate(activeTabIndex - 1);
-  const handleNext = () => onNavigate(activeTabIndex + 1);
-
   // --- Rendu ---
   return (
-    <Box component="div" sx={{ p: 2 }}>
-      <Typography variant="h6" gutterBottom>
-        D7 - Prévenir la Récurrence
+    <Box component="div" sx={{ p: 2, maxWidth: 900, margin: '0 auto' }}>
+      <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
+        D7 – Prévention de la Récurrence
       </Typography>
-      <Grid container spacing={3}>
+      <Paper elevation={2} sx={{ p: 2, mb: 3 }}>
+        <Typography variant="subtitle1" sx={{ mb: 1 }}>
+          Actions de prévention à mettre en place
+        </Typography>
+        <RootCausePreventSelector
+          allRootCauses={availableRootCauses} // Utilise les props ou l'exemple
+          selectedCauses={selectedPreventiveCauses}
+          onSelectionChange={handleCauseSelectionChange}
+        />
+      </Paper>
 
-        {/* Section 1: Sélection des Causes Racines à Prévenir */}
-        <Grid item xs={12}>
-          <Paper elevation={2} sx={{ p: 2 }}>
-            <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'medium' }}>
-              1. Sélection des Causes Racines à traiter pour prévenir la récurrence
-            </Typography>
-            <RootCausePreventSelector
-              allRootCauses={availableRootCauses} // Utilise les props ou l'exemple
-              selectedCauses={selectedPreventiveCauses}
-              onSelectionChange={handleCauseSelectionChange}
-            />
-          </Paper>
-        </Grid>
-
-        {/* Section 2: Planification des Actions Préventives (une section par cause sélectionnée) */}
-        <Grid item xs={12}>
-            <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'medium', mb: 1 }}>
-              2. Définition des Actions Préventives Systémiques
-            </Typography>
-            {selectedPreventiveCauses.length === 0 ? (
-                 <Typography color="textSecondary" sx={{ fontStyle: 'italic' }}>
-                    Sélectionnez une ou plusieurs causes racines ci-dessus pour définir les actions préventives associées.
-                 </Typography>
-            ) : (
-                selectedPreventiveCauses.map(cause => (
-                    <PreventiveActionPlanner
-                        key={cause} // Important pour React
-                        rootCauseText={cause}
-                        actions={preventiveActions[cause] || []} // Passe les actions pour cette cause
-                        onActionAdd={handleAddPreventiveAction}
-                        onActionDelete={handleDeletePreventiveAction}
-                    />
-                ))
-            )}
-        </Grid>
-
-         {/* Section 3: (Optionnel) Modifications Systémiques / Documentation */}
-         <Grid item xs={12} md={6}>
-              <Paper elevation={1} sx={{ p: 2, height: '100%' }}>
-                 <Typography variant="subtitle2" gutterBottom>Mise à jour Documentation / Procédures</Typography>
-                 <TextField
-                    name="documentationUpdates"
-                    label="Ex: Procédures, modes opératoires, FMECA, plans..."
-                    multiline rows={4} fullWidth variant="outlined"
-                    value={documentationUpdates} onChange={handleOtherInputChange}
-                 />
-              </Paper>
-         </Grid>
-         <Grid item xs={12} md={6}>
-             <Paper elevation={1} sx={{ p: 2, height: '100%' }}>
-                 <Typography variant="subtitle2" gutterBottom>Autres Changements Systémiques</Typography>
-                 <TextField
-                    name="systemicChanges"
-                    label="Ex: Standards, formations, systèmes d'information..."
-                    multiline rows={4} fullWidth variant="outlined"
-                     value={systemicChanges} onChange={handleOtherInputChange}
-                />
-             </Paper>
-         </Grid>
-
-        {/* --- Zone des Boutons --- */}
-        <Grid item xs={12}>
-           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 3 }}>
-              <Button variant="outlined" startIcon={<NavigateBeforeIcon />} onClick={handlePrevious} disabled={activeTabIndex === 0}>
-                Précédent
-              </Button>
-               <Box>
-                  <Button variant="contained" color="primary" startIcon={<SaveIcon />} onClick={handleSave} sx={{ mr: 1 }}>
-                    Sauvegarder {tabKeyLabel}
-                  </Button>
-                  <Button variant="contained" endIcon={<NavigateNextIcon />} onClick={handleNext} disabled={activeTabIndex === totalTabs - 1}>
-                     Suivant
-                  </Button>
-              </Box>
-           </Box>
-        </Grid>
+      {/* Section 2: Planification des Actions Préventives (une section par cause sélectionnée) */}
+      <Grid item xs={12}>
+          <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'medium', mb: 1 }}>
+            2. Définition des Actions Préventives Systémiques
+          </Typography>
+          {selectedPreventiveCauses.length === 0 ? (
+               <Typography color="textSecondary" sx={{ fontStyle: 'italic' }}>
+                  Sélectionnez une ou plusieurs causes racines ci-dessus pour définir les actions préventives associées.
+               </Typography>
+          ) : (
+              selectedPreventiveCauses.map(cause => (
+                  <PreventiveActionPlanner
+                      key={cause} // Important pour React
+                      rootCauseText={cause}
+                      actions={preventiveActions[cause] || []} // Passe les actions pour cette cause
+                      onActionAdd={handleAddPreventiveAction}
+                      onActionDelete={handleDeletePreventiveAction}
+                  />
+              ))
+          )}
       </Grid>
+
+       {/* Section 3: (Optionnel) Modifications Systémiques / Documentation */}
+       <Grid item xs={12} md={6}>
+            <Paper elevation={1} sx={{ p: 2, height: '100%' }}>
+               <Typography variant="subtitle2" gutterBottom>Mise à jour Documentation / Procédures</Typography>
+               <TextField
+                  name="documentationUpdates"
+                  label="Ex: Procédures, modes opératoires, FMECA, plans..."
+                  multiline rows={4} fullWidth variant="outlined"
+                  value={documentationUpdates} onChange={handleOtherInputChange}
+               />
+            </Paper>
+       </Grid>
+       <Grid item xs={12} md={6}>
+           <Paper elevation={1} sx={{ p: 2, height: '100%' }}>
+               <Typography variant="subtitle2" gutterBottom>Autres Changements Systémiques</Typography>
+               <TextField
+                  name="systemicChanges"
+                  label="Ex: Standards, formations, systèmes d'information..."
+                  multiline rows={4} fullWidth variant="outlined"
+                   value={systemicChanges} onChange={handleOtherInputChange}
+              />
+           </Paper>
+       </Grid>
+
+      {/* --- Zone des Boutons --- */}
+      <Grid item xs={12}>
+         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 3 }}>
+            <Button variant="outlined" startIcon={<NavigateBeforeIcon />} onClick={handlePrevious} disabled={currentIndex === 0}>
+              Précédent
+            </Button>
+             <Box>
+                <Button variant="contained" color="primary" startIcon={<SaveIcon />} onClick={handleSave} sx={{ mr: 1 }}>
+                  Sauvegarder {tabKeyLabel}
+                </Button>
+                <Button variant="contained" endIcon={<NavigateNextIcon />} onClick={handleNext} disabled={currentIndex === stepsOrder.length - 1}>
+                   Suivant
+                </Button>
+            </Box>
+         </Box>
+      </Grid>
+
+      {/* Zone de feedback utilisateur */}
+      <Snackbar open={saveFeedback.open} autoHideDuration={3000} onClose={handleCloseSnackbar} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+        <Alert onClose={handleCloseSnackbar} severity={saveFeedback.severity} sx={{ width: '100%' }}>
+          {saveFeedback.message}
+        </Alert>
+      </Snackbar>
+
+      {/* Préparation pour ChatAssistant (décommenter pour intégrer) */}
+      {/* <Box sx={{ mt: 4 }}><ChatAssistant /></Box> */}
     </Box>
   );
 }

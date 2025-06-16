@@ -121,15 +121,9 @@ function D1Form({ tabKeyLabel = "D1" }) {
   };
 
   const handleNext = () => {
-    if (validatePage()) { // Valider avant de passer à la suite
-      if (currentIndex < stepsOrder.length - 1) {
-        setCurrentStepKey(stepsOrder[currentIndex + 1]);
-        window.scrollTo(0, 0); // Remonter en haut de la page
-      }
-    } else {
-      // L'utilisateur verra les erreurs sur les champs, une alerte n'est pas forcément nécessaire
-      // alert("Veuillez corriger les erreurs avant de passer à l'étape suivante.");
-      console.log("Validation échouée, impossible de passer à l'étape suivante.");
+    if (currentIndex < stepsOrder.length - 1) {
+      setCurrentStepKey(stepsOrder[currentIndex + 1]);
+      window.scrollTo(0, 0);
     }
   };
 

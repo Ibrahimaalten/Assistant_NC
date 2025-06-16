@@ -14,7 +14,7 @@ import ActionAddForm from './ActionAddForm';       // Component for the add form
  * @param {Array<object>} props.actions3D - The current array of action objects from the parent's state (e.g., formData.actions3D).
  * @param {Function} props.setFormData - The state setter function from the parent component to update the entire formData object.
  */
-const GestionActions3D = ({ actions3D = [], setFormData }) => { // Default actions3D to [] for safety
+const GestionActions3D = ({ actions = [], onActionsChange }) => { // Remplace setFormData par onActionsChange (callback)
 
   // Define the initial state for a new action form
   const initialNewActionState = {
@@ -76,18 +76,8 @@ const GestionActions3D = ({ actions3D = [], setFormData }) => { // Default actio
     // --- End Validation ---
 
 
-    // Update the parent component's state using the setFormData prop
-    setFormData(prevFormData => {
-      // Ensure actions3D array exists in prevFormData, default to empty array if not
-      const currentActions = prevFormData.actions3D || [];
-      return {
-        ...prevFormData, // Keep the rest of the parent's state
-        actions3D: [
-          ...currentActions, // Add existing actions
-          { ...newAction }      // Add a *copy* of the new action object
-        ]
-      };
-    });
+    // Ajoute la nouvelle action à la liste et notifie le parent
+    onActionsChange([...actions, { ...newAction }]);
 
     // Reset the form to initial state and hide it
     setNewAction(initialNewActionState);
@@ -108,19 +98,8 @@ const GestionActions3D = ({ actions3D = [], setFormData }) => { // Default actio
    * @param {number} indexToRemove - The index of the action to remove.
    */
   const handleRemoveAction = (indexToRemove) => {
-    setFormData(prevFormData => {
-      // Ensure actions3D array exists and is an array
-      const currentActions = Array.isArray(prevFormData.actions3D) ? [...prevFormData.actions3D] : [];
-
-      // Remove the action at the specified index
-      currentActions.splice(indexToRemove, 1);
-
-      // Return the updated parent state
-      return {
-        ...prevFormData,
-        actions3D: currentActions
-      };
-    });
+    const updatedActions = actions.filter((_, idx) => idx !== indexToRemove);
+    onActionsChange(updatedActions);
   };
 
   // --- Optional: Add Edit Functionality ---
@@ -140,9 +119,8 @@ const GestionActions3D = ({ actions3D = [], setFormData }) => { // Default actio
       {/* Title and List Display */}
       <Grid item xs={12}>
         <ActionDisplayList
-          actions={actions3D} // Pass the list from props
-          onRemove={handleRemoveAction} // Pass the remove handler
-          // onEdit={handleEditAction} // Pass the edit handler if implemented
+          actions={actions}
+          onRemove={handleRemoveAction}
         />
       </Grid>
 

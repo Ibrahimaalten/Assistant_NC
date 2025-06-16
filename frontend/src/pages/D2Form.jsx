@@ -96,13 +96,9 @@ function D2Form({ tabKeyLabel = "D2" }) { // tabKeyLabel est passé par App.jsx
   };
 
   const handleNext = () => {
-    if (validatePage()) {
-      if (currentIndex < stepsOrder.length - 1) {
-        setCurrentStepKey(stepsOrder[currentIndex + 1]);
-        window.scrollTo(0, 0);
-      }
-    } else {
-      console.log("Validation D2 échouée, impossible de passer à l'étape suivante.");
+    if (currentIndex < stepsOrder.length - 1) {
+      setCurrentStepKey(stepsOrder[currentIndex + 1]);
+      window.scrollTo(0, 0);
     }
   };
 

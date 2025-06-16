@@ -1,5 +1,5 @@
 // src/App.jsx
-import React from 'react'; // useState n'est plus explicitement nécessaire ici pour activeTab
+import React, { useState } from 'react'; // Ajout de useState pour gérer les messages, loading et error
 import { Tabs, Tab, Box, Container, Typography, AppBar, Paper, Grid } from '@mui/material';
 
 // Importer le hook du contexte
@@ -18,7 +18,7 @@ import D7Form from './pages/D7Form';
 import D8Form from './pages/D8Form';
 
 // Importer le ChatAssistant
-import ChatAssistant from './components/ChatAssistant'; // Assurez-vous que le chemin est correct
+import ChatAssistant from './components/ChatAssistant';
 
 // Définitions des onglets AVEC les clés de contexte
 // Ces clés DOIVENT correspondre à celles utilisées dans Form8DContext.js
@@ -61,6 +61,9 @@ function TabPanel(props) {
 function App() {
   // Utiliser le contexte pour l'onglet actif et la fonction pour le changer
   const { currentStepKey, setCurrentStepKey } = useForm8D();
+  const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   // Trouver l'index de l'onglet actif basé sur currentStepKey
   // Si currentStepKey n'est pas encore défini ou ne correspond à aucune clé, on met 0 par défaut.
@@ -71,6 +74,19 @@ function App() {
     if (tabDefinitions[newTabIndex]) {
       setCurrentStepKey(tabDefinitions[newTabIndex].key);
     }
+  };
+
+  const handleSend = async (text) => {
+    setLoading(true);
+    setError('');
+    try {
+      // Appelle ton backend ici (fetch/axios)
+      // const response = await ...
+      // setMessages([...messages, { role: 'user', content: text }, { role: 'assistant', content: response.answer, sources: response.sources }]);
+    } catch (e) {
+      setError("Erreur lors de la communication avec l'assistant.");
+    }
+    setLoading(false);
   };
 
   // La fonction handleNavigate n'est plus passée aux enfants.
@@ -163,7 +179,7 @@ function App() {
             overflow: 'hidden' // Pour s'assurer que le chat ne déborde pas
           }}
         >
-          <ChatAssistant /> {/* ChatAssistant devrait gérer son propre padding interne */}
+          <ChatAssistant onSend={handleSend} messages={messages} loading={loading} error={error} /> {/* ChatAssistant intégré avec gestion des messages, loading et erreurs */}
         </Grid>
       </Grid>
     </Container>

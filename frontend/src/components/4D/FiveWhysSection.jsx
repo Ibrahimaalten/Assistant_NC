@@ -10,7 +10,13 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'; // Icône pour cause racine
 
 // Accepter onWhyChange, onRootCauseChange, et onDeleteWhy
-const FiveWhysSection = ({ potentialCauses, fiveWhysData, onWhyChange, onRootCauseChange, onDeleteWhy }) => {
+const FiveWhysSection = ({
+    potentialCauses,
+    fiveWhysData,
+    onFiveWhysChange, // <- nom attendu
+    onFiveWhysRootCauseChange, // <- nom attendu
+    onDeleteFiveWhys // <- nom attendu
+}) => {
     const [selectedCause, setSelectedCause] = useState('');
     const [dialogOpen, setDialogOpen] = useState(false);
     const [causeToDelete, setCauseToDelete] = useState(null);
@@ -25,17 +31,17 @@ const FiveWhysSection = ({ potentialCauses, fiveWhysData, onWhyChange, onRootCau
         }
     }, [potentialCauses, selectedCause]);
 
-    // Handler LOCAL qui appelle la prop onWhyChange
+    // Handler LOCAL qui appelle la prop onFiveWhysChange
     const handleWhyChange = (whyIndex, event) => {
-        if (selectedCause && onWhyChange) {
-            onWhyChange(selectedCause, whyIndex, event.target.value);
+        if (selectedCause && onFiveWhysChange) {
+            onFiveWhysChange(selectedCause, whyIndex, event.target.value);
         }
     };
 
-    // Handler LOCAL qui appelle la prop onRootCauseChange
+    // Handler LOCAL qui appelle la prop onFiveWhysRootCauseChange
     const handleRootCauseInputChange = (event) => {
-        if (selectedCause && onRootCauseChange) {
-            onRootCauseChange(selectedCause, event.target.value);
+        if (selectedCause && onFiveWhysRootCauseChange) {
+            onFiveWhysRootCauseChange(selectedCause, event.target.value);
         }
     };
 
@@ -51,8 +57,8 @@ const FiveWhysSection = ({ potentialCauses, fiveWhysData, onWhyChange, onRootCau
         setCauseToDelete(null);
     };
     const handleConfirmDelete = () => {
-        if (causeToDelete && onDeleteWhy) {
-            onDeleteWhy(causeToDelete);
+        if (causeToDelete && onDeleteFiveWhys) {
+            onDeleteFiveWhys(causeToDelete);
         }
         handleCloseDialog();
     };
@@ -110,8 +116,9 @@ const FiveWhysSection = ({ potentialCauses, fiveWhysData, onWhyChange, onRootCau
                                     {Array(5).fill(0).map((_, index) => (
                                         <TextField
                                             key={index} id={`why-${index}`} label={`Pourquoi ${index + 1} ?`}
-                                            fullWidth variant="outlined" value={currentWhys[index]} // Utilise currentWhys
-                                            onChange={(e) => handleWhyChange(index, e)} sx={{ mb: 2 }} // Utilise handler local
+                                            fullWidth variant="outlined" value={currentWhys[index]}
+                                            onChange={(e) => handleWhyChange(index, e)}
+                                            sx={{ mb: 2 }}
                                             placeholder={`Réponse au ${index + 1}ème pourquoi...`}
                                         />
                                     ))}
@@ -127,8 +134,8 @@ const FiveWhysSection = ({ potentialCauses, fiveWhysData, onWhyChange, onRootCau
                                         multiline
                                         rows={2}
                                         variant="outlined"
-                                        value={currentRootCause} // Utilise currentRootCause
-                                        onChange={handleRootCauseInputChange} // Utilise handler local
+                                        value={currentRootCause}
+                                        onChange={handleRootCauseInputChange}
                                         sx={{ mt: 1, backgroundColor: '#f0f4f8' }}
                                     />
                                 </Box>
@@ -157,7 +164,7 @@ const FiveWhysSection = ({ potentialCauses, fiveWhysData, onWhyChange, onRootCau
                                         <ListItem
                                             key={cause}
                                             disablePadding
-                                            secondaryAction={onDeleteWhy && // Affiche seulement si la prop onDeleteWhy est passée
+                                            secondaryAction={onDeleteFiveWhys &&
                                                 <IconButton edge="end" aria-label="delete" onClick={() => openDeleteConfirmDialog(cause)} title={`Supprimer "${cause}"`}>
                                                     <DeleteIcon />
                                                 </IconButton>
