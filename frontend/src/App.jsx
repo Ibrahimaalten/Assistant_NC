@@ -93,178 +93,89 @@ function App() {
   };
 
   return (
-    <Routes>
-      <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/liste-nonconformites" element={<ListeNonConformites />} />
-      <Route path="/8d" element={
-        <Container maxWidth={false} sx={{ p: 0, m: 0, minHeight: '100vh', background: '#f8f9fa' }}>
-          <Typography variant="h4" align="center" sx={{ mt: 3, mb: 2, color: '#008BBD', fontWeight: 700 }}>
-            Nouvelle Non-Conformité – Processus 8D
-          </Typography>
-          {/* Ici, on affiche tous les onglets 8D comme dans la page principale */}
-          <Grid container sx={{ height: '100%' }}>
-            <Grid
-              item
-              xs={12}
-              md={8}
-              sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                height: '100%',
-              }}
-            >
-              <AppBar position="sticky" color="primary" sx={{ borderRadius: 0 }}>
-                <Typography variant="h5" component="h1" sx={{ p: 2, textAlign: 'center' }}>
-                  Gestion des Non-Conformités - Méthode 8D
-                </Typography>
-                <Box sx={{ position: 'absolute', top: 16, right: 24 }}>
-                  <Link to="/dashboard" style={{ color: '#fff', textDecoration: 'none', fontWeight: 'bold', background: '#008BBD', padding: '8px 16px', borderRadius: '4px' }}>
-                    Accéder au Dashboard
-                  </Link>
-                </Box>
-              </AppBar>
-              <Paper elevation={2} sx={{ position: 'sticky', top: 0, zIndex: 10 }}>
-                <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-                  <Tabs
-                    value={activeTabIndex}
-                    onChange={handleTabChange}
-                    variant="scrollable"
-                    scrollButtons="auto"
-                    aria-label="Onglets du processus 8D"
-                  >
-                    {tabDefinitions.map((tab, index) => (
-                      <Tab
-                        label={tab.label}
-                        id={`tab-${tab.key}`}
-                        aria-controls={`tabpanel-${tab.key}`}
-                        key={tab.key}
-                      />
-                    ))}
-                  </Tabs>
-                </Box>
-              </Paper>
-              <Box sx={{ flexGrow: 1, overflowY: 'auto', p: 0 }}>
-                {tabDefinitions.map((tab, index) => {
-                  const FormComponent = tab.component;
-                  const tabKeyDisplayLabel = tab.label.split(' - ')[0] || tab.key;
-                  return (
-                    <TabPanel value={activeTabIndex} index={index} key={tab.key}>
-                      <FormComponent tabKeyLabel={tabKeyDisplayLabel} />
-                    </TabPanel>
-                  );
-                })}
-              </Box>
-            </Grid>
-            <Grid
-              item
-              xs={12}
-              md={4}
-              sx={{
-                height: '100%', // Prend la hauteur du parent Grid
-                minHeight: 0,
-                borderLeft: { md: '1px solid #ccc' },
-                display: 'flex',
-                flexDirection: 'column',
-                backgroundColor: '#f8f9fa',
-                overflow: 'hidden',
-                position: 'relative',
-                top: 0
-              }}
-            >
-              <ChatAssistant onSend={handleSend} messages={messages} loading={loading} error={error} />
-            </Grid>
-          </Grid>
-        </Container>
-      } />
-      <Route path="/*" element={
-        <Container
-          maxWidth={false}
+    // Container principal pour la mise en page globale avec Grid
+    <Container
+      maxWidth={false}
+      sx={{
+        display: 'flex',
+        height: '100vh', // Pleine hauteur de la fenêtre
+        p: 0, // Pas de padding sur le container externe
+        m: 0, // Pas de marge
+        overflow: 'hidden' // Empêcher le défilement du container principal
+      }}
+    >
+      <Grid container sx={{ height: '100%' }}>
+        {/* Colonne pour le contenu 8D (AppBar, Onglets, Contenu de l'onglet) */}
+        <Grid
+          item
+          xs={12}
+          md={8}
           sx={{
             display: 'flex',
-            height: '100vh', // Force la hauteur totale de la fenêtre pour le Grid
-            p: 0,
-            m: 0,
+            flexDirection: 'column',
+            height: '100%',
+          }}
+        >
+          <AppBar position="sticky" color="primary" sx={{ borderRadius: 0 }}>
+            <Typography variant="h5" component="h1" sx={{ p: 2, textAlign: 'center' }}>
+              Gestion des Non-Conformités - Méthode 8D
+            </Typography>
+            <Box sx={{ position: 'absolute', top: 16, right: 24 }}>
+              <Link to="/dashboard" style={{ color: '#fff', textDecoration: 'none', fontWeight: 'bold', background: '#008BBD', padding: '8px 16px', borderRadius: '4px' }}>
+                Accéder au Dashboard
+              </Link>
+            </Box>
+          </AppBar>
+          <Paper elevation={2} sx={{ position: 'sticky', top: 0, zIndex: 10 }}>
+            <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+              <Tabs
+                value={activeTabIndex}
+                onChange={handleTabChange}
+                variant="scrollable"
+                scrollButtons="auto"
+                aria-label="Onglets du processus 8D"
+              >
+                {tabDefinitions.map((tab, index) => (
+                  <Tab
+                    label={tab.label}
+                    id={`tab-${tab.key}`}
+                    aria-controls={`tabpanel-${tab.key}`}
+                    key={tab.key}
+                  />
+                ))}
+              </Tabs>
+            </Box>
+          </Paper>
+          <Box sx={{ flexGrow: 1, overflowY: 'auto', p: 0 }}>
+            {tabDefinitions.map((tab, index) => {
+              const FormComponent = tab.component;
+              const tabKeyDisplayLabel = tab.label.split(' - ')[0] || tab.key;
+              return (
+                <TabPanel value={activeTabIndex} index={index} key={tab.key}>
+                  <FormComponent tabKeyLabel={tabKeyDisplayLabel} />
+                </TabPanel>
+              );
+            })}
+          </Box>
+        </Grid>
+        {/* Colonne pour le ChatAssistant */}
+        <Grid
+          item
+          xs={12}
+          md={4}
+          sx={{
+            height: { xs: '50vh', md: '100%' },
+            borderLeft: { md: '1px solid #ccc' },
+            display: 'flex',
+            flexDirection: 'column',
+            backgroundColor: '#f8f9fa',
             overflow: 'hidden'
           }}
         >
-          <Grid container sx={{ height: '100vh' }}>
-            <Grid
-              item
-              xs={12}
-              md={8}
-              sx={{
-                height: '100vh', // Prend toute la hauteur de la fenêtre
-                display: 'flex',
-                flexDirection: 'column',
-                backgroundColor: '#fff',
-                overflow: 'auto',
-                minHeight: 0
-              }}
-            >
-              <AppBar position="sticky" color="primary" sx={{ borderRadius: 0 }}>
-                <Typography variant="h5" component="h1" sx={{ p: 2, textAlign: 'center' }}>
-                  Gestion des Non-Conformités - Méthode 8D
-                </Typography>
-                <Box sx={{ position: 'absolute', top: 16, right: 24 }}>
-                  <Link to="/dashboard" style={{ color: '#fff', textDecoration: 'none', fontWeight: 'bold', background: '#008BBD', padding: '8px 16px', borderRadius: '4px' }}>
-                    Accéder au Dashboard
-                  </Link>
-                </Box>
-              </AppBar>
-              <Paper elevation={2} sx={{ position: 'sticky', top: 0, zIndex: 10 }}>
-                <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-                  <Tabs
-                    value={activeTabIndex}
-                    onChange={handleTabChange}
-                    variant="scrollable"
-                    scrollButtons="auto"
-                    aria-label="Onglets du processus 8D"
-                  >
-                    {tabDefinitions.map((tab, index) => (
-                      <Tab
-                        label={tab.label}
-                        id={`tab-${tab.key}`}
-                        aria-controls={`tabpanel-${tab.key}`}
-                        key={tab.key}
-                      />
-                    ))}
-                  </Tabs>
-                </Box>
-              </Paper>
-              <Box sx={{ flexGrow: 1, overflowY: 'auto', p: 0 }}>
-                {tabDefinitions.map((tab, index) => {
-                  const FormComponent = tab.component;
-                  const tabKeyDisplayLabel = tab.label.split(' - ')[0] || tab.key;
-                  return (
-                    <TabPanel value={activeTabIndex} index={index} key={tab.key}>
-                      <FormComponent tabKeyLabel={tabKeyDisplayLabel} />
-                    </TabPanel>
-                  );
-                })}
-              </Box>
-            </Grid>
-            <Grid
-              item
-              xs={12}
-              md={4}
-              sx={{
-                height: '100vh', // Prend toute la hauteur de la fenêtre
-                minHeight: 0,
-                borderLeft: { md: '1px solid #ccc' },
-                display: 'flex',
-                flexDirection: 'column',
-                backgroundColor: '#f8f9fa',
-                overflow: 'hidden',
-                position: 'relative',
-                top: 0
-              }}
-            >
-              <ChatAssistant onSend={handleSend} messages={messages} loading={loading} error={error} />
-            </Grid>
-          </Grid>
-        </Container>
-      } />
-    </Routes>
+          <ChatAssistant onSend={handleSend} messages={messages} loading={loading} error={error} />
+        </Grid>
+      </Grid>
+    </Container>
   );
 }
 
