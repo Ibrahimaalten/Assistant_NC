@@ -4,6 +4,7 @@ uvicorn
 typing-extensions
 pydantic
 langchain
+langchain-chroma
 langchain-community
 langchain-core
 langchain-ollama
