@@ -58,7 +58,7 @@ function Dashboard() {
           style={{
             background: '#008BBD', color: '#fff', border: 'none', borderRadius: '12px', padding: '1rem 2.5rem', fontWeight: 700, fontSize: '1.2rem', cursor: 'pointer', boxShadow: '0 4px 16px rgba(0,0,0,0.10)', transition: 'background 0.2s', letterSpacing: 0.5, marginTop: '0.5rem'
           }}
-          onClick={() => navigate('/8d')}
+          onClick={() => navigate('/')}
         >
           + Créer une nouvelle non-conformité
         </button>
