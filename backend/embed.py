@@ -9,8 +9,10 @@ from pathlib import Path
 import shutil # Pour supprimer l'ancien DB_DIR
 
 # Configuration des chemins
-DOCUMENTS_DIR = "C:\\Users\\lrodembourg\\Documents\\Test_Langchain\\documents" # Assure-toi que c'est le bon
-DB_DIR = "C:/Users/lrodembourg/Documents/Test_Langchain/chroma_db" # Utilise un nom de dossier spécifique pour cette base
+# DOCUMENTS_DIR = "C:\\Users\\lrodembourg\\Documents\\Test_Langchain\\documents" # Assure-toi que c'est le bon
+# DB_DIR = "C:/Users/lrodembourg/Documents/Test_Langchain/chroma_db" # Utilise un nom de dossier spécifique pour cette base
+DOCUMENTS_DIR = "C:\\Users\\isene\\MyWorspace\\Assistant_NC\\documents" # Assure-toi que c'est le bon
+DB_DIR = "C:/Users/isene/MyWorspace\Assistant_NC/documents/Test_Langchain/chroma_db" # Utilise un nom de dossier spécifique pour cette base
 ollama_endpoint = "http://localhost:11434"
 
 # --- Fonction d'ingestion CSV CORRIGÉE et AMÉLIORÉE ---

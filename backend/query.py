@@ -7,7 +7,8 @@ from langchain_core.prompts import ChatPromptTemplate # Pour le prompt par défa
 
 
 # Configuration
-DB_DIR = "C:/Users/lrodembourg/Documents/Test_Langchain/chroma_db"
+# DB_DIR = "C:/Users/lrodembourg/Documents/Test_Langchain/chroma_db"
+DB_DIR = "C:/Users/isene/MyWorspace\Assistant_NC/documents/Test_Langchain/chroma_db"
 ollama_endpoint = "http://localhost:11434"
 
 
