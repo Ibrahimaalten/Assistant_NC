@@ -202,120 +202,50 @@ function ChatAssistant() {
   };
 
   return (
-    <Paper elevation={3} sx={{
-      p: 2, bgcolor: 'background.paper', borderRadius: 3, height: '100%',
-      display: 'flex', flexDirection: 'column', boxShadow: 3
-    }}>
-      <Box sx={{ flex: 1, overflowY: 'auto', mb: 2, p:1 }} ref={chatMessagesRef}>
-        {messages.map((msg) => (
-          <Box 
-            key={msg.id} 
-            sx={{ 
-              display: 'flex', 
-              mb: 1.5, 
-              flexDirection: msg.sender === 'user' ? 'row-reverse' : 'row', 
-              alignItems: 'flex-end' // Aligner en bas pour un look plus "chat"
-            }}
-          >
-            <Avatar 
-              sx={{ 
-                bgcolor: msg.sender === 'user' ? 'primary.main' : 
-                         (msg.sender === 'error' ? 'error.main' : 
-                         (msg.sender === 'system' ? 'info.main' : 'secondary.main')), 
-                color: 'white',
-                ml: msg.sender === 'user' ? 1 : 0, 
-                mr: msg.sender === 'user' ? 0 : 1,
-                width: 32, height: 32, fontSize: '0.8rem' // Plus petit avatar
-              }}
-            >
-              {msg.sender === 'user' ? 'U' : (msg.sender === 'error' ? 'E' : (msg.sender === 'system' ? 'S' : 'A'))}
-            </Avatar>
-            <Box 
-              sx={{
-                bgcolor: msg.sender === 'user' ? 'primary.light' : 
-                         (msg.sender === 'error' ? 'error.light' : 
-                         (msg.sender === 'system' ? 'info.light' : 'grey.100')),
-                color: msg.sender === 'user' ? 'primary.contrastText' : 'text.primary',
-                p: 1.5, 
-                borderRadius: msg.sender === 'user' ? '15px 15px 0 15px' : '15px 15px 15px 0', // Bulles de chat classiques
-                maxWidth: '75%', 
-                boxShadow: 1, 
-                position: 'relative',
-                wordBreak: 'break-word' // Pour les longs mots/urls
-              }}
-            >
-              {msg.isLoading && msg.sender === 'bot' && (
-                <CircularProgress 
-                  size={16} 
-                  sx={{ 
-                    position: 'absolute', 
-                    top: '50%', 
-                    left: '50%', 
-                    marginTop: '-8px', 
-                    marginLeft: '-8px',
-                    color: msg.sender === 'user' ? 'primary.contrastText' : 'text.secondary'
-                  }} 
-                />
-              )}
-              
-              {msg.htmlText ? 
-                <div dangerouslySetInnerHTML={{ __html: msg.htmlText }} /> 
-                : 
-                <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>{msg.text}</Typography>
-              }
-
-              {msg.isSuggestion && msg.suggestionDetails && (
-                <button
-                  onClick={() => applyFieldSuggestion(msg.suggestionDetails.section, msg.suggestionDetails.field, msg.suggestionDetails.value)}
-                  style={{ 
-                    display: 'block', 
-                    marginTop: '10px', 
-                    padding: '6px 12px', 
-                    fontSize: '0.875rem', 
-                    cursor: 'pointer', 
-                    backgroundColor: '#4CAF50', // Vert
-                    color: 'white', 
-                    border: 'none', 
-                    borderRadius: '4px',
-                    boxShadow: '0 2px 2px 0 rgba(0,0,0,0.14), 0 3px 1px -2px rgba(0,0,0,0.12), 0 1px 5px 0 rgba(0,0,0,0.20)'
-                  }}
-                >
-                  Appliquer la Suggestion
-                </button>
-              )}
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+      <Paper elevation={2} sx={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, background: '#fff', p: 0 }}>
+        <Box
+          ref={chatMessagesRef}
+          sx={{ flex: 1, overflowY: 'auto', p: 2, minHeight: 0, maxHeight: '100%' }}
+        >
+          {messages.map((msg) => (
+            <Box key={msg.id} sx={{ display: 'flex', mb: 1, flexDirection: msg.sender === 'user' ? 'row-reverse' : 'row', alignItems: 'flex-end' }}>
+              <Avatar sx={{ bgcolor: msg.sender === 'user' ? '#008BBD' : '#43e97b', width: 32, height: 32, fontSize: 18 }}>
+                {msg.sender === 'user' ? 'U' : 'A'}
+              </Avatar>
+              <Box sx={{
+                bgcolor: msg.sender === 'user' ? '#e3f2fd' : '#e8f5e9',
+                color: '#222',
+                borderRadius: 2,
+                px: 2,
+                py: 1,
+                mx: 1,
+                maxWidth: '75%',
+                fontSize: 15,
+                boxShadow: 1
+              }}>
+                {msg.isLoading ? <CircularProgress size={18} /> : msg.text}
+              </Box>
             </Box>
-          </Box>
-        ))}
-        <div ref={messagesEndRef} />
-      </Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, pt:1, borderTop: '1px solid', borderColor: 'divider' }}>
-        <TextField
-          fullWidth
-          placeholder="Posez votre question..."
-          value={userInput}
-          onChange={handleInputChange}
-          onKeyDown={e => {if (e.key === 'Enter' && !e.shiftKey) { handleSendMessage(e); e.preventDefault();}}} // Envoyer avec Entrée (pas Shift+Entrée)
-          disabled={isOverallLoading}
-          size="small"
-          variant="outlined"
-        />
-        <IconButton color="primary" onClick={handleSendMessage} disabled={isOverallLoading || !userInput.trim()}>
-          {isOverallLoading ? <CircularProgress size={24} /> : <SendIcon />}
-        </IconButton>
-        {isOverallLoading && (
-          <IconButton color="error" onClick={handleStopGeneration} title="Arrêter la génération" sx={{ bgcolor: '#fff', border: '1px solid #d32f2f', ml: 1 }}>
-            <StopIcon />
+          ))}
+          <div ref={messagesEndRef} />
+        </Box>
+        <Box component="form" onSubmit={handleSendMessage} sx={{ display: 'flex', p: 1, borderTop: '1px solid #eee', background: '#fafbfc' }}>
+          <TextField
+            value={userInput}
+            onChange={handleInputChange}
+            placeholder="Posez une question sur votre 8D..."
+            fullWidth
+            size="small"
+            sx={{ mr: 1 }}
+            autoFocus
+          />
+          <IconButton type="submit" color="primary" disabled={isOverallLoading || !userInput.trim()}>
+            <SendIcon />
           </IconButton>
-        )}
-      </Box>
-      <Snackbar 
-        open={!!error} 
-        message={error} 
-        autoHideDuration={6000} 
-        onClose={() => setError(null)} 
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      />
-    </Paper>
+        </Box>
+      </Paper>
+    </Box>
   );
 }
 export default ChatAssistant;

@@ -52,6 +52,9 @@ function D2Form({ tabKeyLabel = "D2" }) { // tabKeyLabel est passé par App.jsx
   // État local pour les erreurs de validation de cette page
   const [localErrors, setLocalErrors] = useState({});
 
+  // --- Gestionnaire de Sauvegarde vers l'API ---
+  const [apiStatus, setApiStatus] = useState(null); // Pour feedback utilisateur
+
   // Gestionnaire pour Description2DInput
   // newDescriptionObject est l'objet complet {qui, quoi, ou...} renvoyé par Description2DInput
   const handleDescriptionChange = (newDescriptionObject) => {
@@ -77,13 +80,27 @@ function D2Form({ tabKeyLabel = "D2" }) { // tabKeyLabel est passé par App.jsx
     return Object.keys(tempErrors).length === 0;
   };
 
-  const handleSave = () => {
-    if (validatePage()) {
-      console.log(`Données ${tabKeyLabel} validées (issues du contexte):`, sectionData);
-      alert(`Données ${tabKeyLabel} prêtes pour la sauvegarde (simulation) !`);
-    } else {
-      console.log(`Validation ${tabKeyLabel} échouée`, localErrors);
+  const handleSubmitToAPI = async () => {
+    if (!validatePage()) return;
+    setApiStatus(null);
+    try {
+      const response = await fetch('/api/nonconformites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form8DData),
+      });
+      if (response.ok) {
+        setApiStatus('success');
+      } else {
+        setApiStatus('error');
+      }
+    } catch (error) {
+      setApiStatus('error');
     }
+  };
+
+  const handleSave = () => {
+    handleSubmitToAPI();
   };
 
   const currentIndex = stepsOrder.indexOf(currentStepKey);
@@ -125,6 +142,13 @@ function D2Form({ tabKeyLabel = "D2" }) { // tabKeyLabel est passé par App.jsx
 
         {/* --- Zone des Boutons --- */}
         <Grid item xs={12}>
+          {/* Feedback utilisateur API */}
+          {apiStatus === 'success' && (
+            <Typography color="success.main" sx={{ mb: 2 }}>Sauvegarde réussie !</Typography>
+          )}
+          {apiStatus === 'error' && (
+            <Typography color="error.main" sx={{ mb: 2 }}>Erreur lors de la sauvegarde. Veuillez réessayer.</Typography>
+          )}
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 4, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
             <Button
               variant="outlined"

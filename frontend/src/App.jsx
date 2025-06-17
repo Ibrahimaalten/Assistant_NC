@@ -1,6 +1,7 @@
 // src/App.jsx
 import React, { useState } from 'react'; // Ajout de useState pour gérer les messages, loading et error
 import { Tabs, Tab, Box, Container, Typography, AppBar, Paper, Grid } from '@mui/material';
+import { Routes, Route, Link } from 'react-router-dom';
 
 // Importer le hook du contexte
 import { useForm8D } from './contexts/Form8DContext'; // Assurez-vous que le chemin est correct
@@ -19,6 +20,8 @@ import D8Form from './pages/D8Form';
 
 // Importer le ChatAssistant
 import ChatAssistant from './components/ChatAssistant';
+import Dashboard from './components/Dashboard';
+import ListeNonConformites from './components/ListeNonConformites';
 
 // Définitions des onglets AVEC les clés de contexte
 // Ces clés DOIVENT correspondre à celles utilisées dans Form8DContext.js
@@ -89,100 +92,179 @@ function App() {
     setLoading(false);
   };
 
-  // La fonction handleNavigate n'est plus passée aux enfants.
-  // Les composants DxForm géreront leur propre navigation "Précédent"/"Suivant"
-  // en utilisant setCurrentStepKey du contexte.
-
   return (
-    // Container principal pour la mise en page globale avec Grid
-    <Container
-      maxWidth={false} // Utiliser toute la largeur disponible
-      sx={{
-        display: 'flex',
-        height: '100vh', // Pleine hauteur de la fenêtre
-        p: 0, // Pas de padding sur le container externe
-        m: 0, // Pas de marge
-        overflow: 'hidden' // Empêcher le défilement du container principal
-      }}
-    >
-      <Grid container sx={{ height: '100%' }}>
-        {/* Colonne pour le contenu 8D (AppBar, Onglets, Contenu de l'onglet) */}
-        <Grid
-          item
-          xs={12} // Pleine largeur sur mobile
-          md={8}  // 2/3 de la largeur sur les écrans moyens et plus
+    <Routes>
+      <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/liste-nonconformites" element={<ListeNonConformites />} />
+      <Route path="/8d" element={
+        <Container maxWidth={false} sx={{ p: 0, m: 0, minHeight: '100vh', background: '#f8f9fa' }}>
+          <Typography variant="h4" align="center" sx={{ mt: 3, mb: 2, color: '#008BBD', fontWeight: 700 }}>
+            Nouvelle Non-Conformité – Processus 8D
+          </Typography>
+          {/* Ici, on affiche tous les onglets 8D comme dans la page principale */}
+          <Grid container sx={{ height: '100%' }}>
+            <Grid
+              item
+              xs={12}
+              md={8}
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                height: '100%',
+              }}
+            >
+              <AppBar position="sticky" color="primary" sx={{ borderRadius: 0 }}>
+                <Typography variant="h5" component="h1" sx={{ p: 2, textAlign: 'center' }}>
+                  Gestion des Non-Conformités - Méthode 8D
+                </Typography>
+                <Box sx={{ position: 'absolute', top: 16, right: 24 }}>
+                  <Link to="/dashboard" style={{ color: '#fff', textDecoration: 'none', fontWeight: 'bold', background: '#008BBD', padding: '8px 16px', borderRadius: '4px' }}>
+                    Accéder au Dashboard
+                  </Link>
+                </Box>
+              </AppBar>
+              <Paper elevation={2} sx={{ position: 'sticky', top: 0, zIndex: 10 }}>
+                <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+                  <Tabs
+                    value={activeTabIndex}
+                    onChange={handleTabChange}
+                    variant="scrollable"
+                    scrollButtons="auto"
+                    aria-label="Onglets du processus 8D"
+                  >
+                    {tabDefinitions.map((tab, index) => (
+                      <Tab
+                        label={tab.label}
+                        id={`tab-${tab.key}`}
+                        aria-controls={`tabpanel-${tab.key}`}
+                        key={tab.key}
+                      />
+                    ))}
+                  </Tabs>
+                </Box>
+              </Paper>
+              <Box sx={{ flexGrow: 1, overflowY: 'auto', p: 0 }}>
+                {tabDefinitions.map((tab, index) => {
+                  const FormComponent = tab.component;
+                  const tabKeyDisplayLabel = tab.label.split(' - ')[0] || tab.key;
+                  return (
+                    <TabPanel value={activeTabIndex} index={index} key={tab.key}>
+                      <FormComponent tabKeyLabel={tabKeyDisplayLabel} />
+                    </TabPanel>
+                  );
+                })}
+              </Box>
+            </Grid>
+            <Grid
+              item
+              xs={12}
+              md={4}
+              sx={{
+                height: '100%', // Prend la hauteur du parent Grid
+                minHeight: 0,
+                borderLeft: { md: '1px solid #ccc' },
+                display: 'flex',
+                flexDirection: 'column',
+                backgroundColor: '#f8f9fa',
+                overflow: 'hidden',
+                position: 'relative',
+                top: 0
+              }}
+            >
+              <ChatAssistant onSend={handleSend} messages={messages} loading={loading} error={error} />
+            </Grid>
+          </Grid>
+        </Container>
+      } />
+      <Route path="/*" element={
+        <Container
+          maxWidth={false}
           sx={{
             display: 'flex',
-            flexDirection: 'column',
-            height: '100%',
-            // borderRight: { md: '1px solid #ccc' } // Bordure entre les sections sur md+
+            height: '100vh', // Force la hauteur totale de la fenêtre pour le Grid
+            p: 0,
+            m: 0,
+            overflow: 'hidden'
           }}
         >
-          <AppBar position="sticky" color="primary" sx={{ borderRadius: 0 /* Pas de coins arrondis si pleine largeur */ }}>
-            <Typography variant="h5" component="h1" sx={{ p: 2, textAlign: 'center' }}>
-              Gestion des Non-Conformités - Méthode 8D
-            </Typography>
-          </AppBar>
-
-          {/* Barre d'onglets */}
-          <Paper elevation={2} sx={{ position: 'sticky', top: 0, zIndex: 10 /* Assurer que les onglets sont au-dessus */ }}> {/* Paper pour les onglets */}
-            <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-              <Tabs
-                value={activeTabIndex}
-                onChange={handleTabChange}
-                variant="scrollable"
-                scrollButtons="auto"
-                aria-label="Onglets du processus 8D"
-              >
-                {tabDefinitions.map((tab, index) => (
-                  <Tab
-                    label={tab.label}
-                    id={`tab-${tab.key}`} // Utiliser la clé unique pour l'ID
-                    aria-controls={`tabpanel-${tab.key}`}
-                    key={tab.key} // Utiliser la clé unique pour la prop key de React
-                  />
-                ))}
-              </Tabs>
-            </Box>
-          </Paper>
-
-          {/* Contenu de l'onglet actif */}
-          <Box sx={{ flexGrow: 1, overflowY: 'auto', p: 0 /* Le padding sera dans TabPanel ou DxForm */ }}>
-            {/* Le Paper autour de chaque contenu d'onglet est maintenant dans TabPanel */}
-            {tabDefinitions.map((tab, index) => {
-              const FormComponent = tab.component;
-              // tabKeyLabel est toujours utile pour l'affichage dans le DxForm
-              const tabKeyDisplayLabel = tab.label.split(' - ')[0] || tab.key; // Ex: "D1" ou "Initialisation"
-
-              return (
-                <TabPanel value={activeTabIndex} index={index} key={tab.key}>
-                  <FormComponent
-                    tabKeyLabel={tabKeyDisplayLabel}
-                  />
-                </TabPanel>
-              );
-            })}
-          </Box>
-        </Grid>
-
-        {/* Colonne pour le ChatAssistant */}
-        <Grid
-          item
-          xs={12} // Prendra toute la largeur sous la section 8D sur mobile
-          md={4}  // 1/3 de la largeur sur les écrans moyens et plus
-          sx={{
-            height: { xs: '50vh', md: '100%' }, // Hauteur différente sur mobile vs desktop
-            borderLeft: { md: '1px solid #ccc' }, // Bordure visible uniquement sur desktop
-            display: 'flex',
-            flexDirection: 'column',
-            backgroundColor: '#f8f9fa', // Une couleur de fond légèrement différente
-            overflow: 'hidden' // Pour s'assurer que le chat ne déborde pas
-          }}
-        >
-          <ChatAssistant onSend={handleSend} messages={messages} loading={loading} error={error} /> {/* ChatAssistant intégré avec gestion des messages, loading et erreurs */}
-        </Grid>
-      </Grid>
-    </Container>
+          <Grid container sx={{ height: '100vh' }}>
+            <Grid
+              item
+              xs={12}
+              md={8}
+              sx={{
+                height: '100vh', // Prend toute la hauteur de la fenêtre
+                display: 'flex',
+                flexDirection: 'column',
+                backgroundColor: '#fff',
+                overflow: 'auto',
+                minHeight: 0
+              }}
+            >
+              <AppBar position="sticky" color="primary" sx={{ borderRadius: 0 }}>
+                <Typography variant="h5" component="h1" sx={{ p: 2, textAlign: 'center' }}>
+                  Gestion des Non-Conformités - Méthode 8D
+                </Typography>
+                <Box sx={{ position: 'absolute', top: 16, right: 24 }}>
+                  <Link to="/dashboard" style={{ color: '#fff', textDecoration: 'none', fontWeight: 'bold', background: '#008BBD', padding: '8px 16px', borderRadius: '4px' }}>
+                    Accéder au Dashboard
+                  </Link>
+                </Box>
+              </AppBar>
+              <Paper elevation={2} sx={{ position: 'sticky', top: 0, zIndex: 10 }}>
+                <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+                  <Tabs
+                    value={activeTabIndex}
+                    onChange={handleTabChange}
+                    variant="scrollable"
+                    scrollButtons="auto"
+                    aria-label="Onglets du processus 8D"
+                  >
+                    {tabDefinitions.map((tab, index) => (
+                      <Tab
+                        label={tab.label}
+                        id={`tab-${tab.key}`}
+                        aria-controls={`tabpanel-${tab.key}`}
+                        key={tab.key}
+                      />
+                    ))}
+                  </Tabs>
+                </Box>
+              </Paper>
+              <Box sx={{ flexGrow: 1, overflowY: 'auto', p: 0 }}>
+                {tabDefinitions.map((tab, index) => {
+                  const FormComponent = tab.component;
+                  const tabKeyDisplayLabel = tab.label.split(' - ')[0] || tab.key;
+                  return (
+                    <TabPanel value={activeTabIndex} index={index} key={tab.key}>
+                      <FormComponent tabKeyLabel={tabKeyDisplayLabel} />
+                    </TabPanel>
+                  );
+                })}
+              </Box>
+            </Grid>
+            <Grid
+              item
+              xs={12}
+              md={4}
+              sx={{
+                height: '100vh', // Prend toute la hauteur de la fenêtre
+                minHeight: 0,
+                borderLeft: { md: '1px solid #ccc' },
+                display: 'flex',
+                flexDirection: 'column',
+                backgroundColor: '#f8f9fa',
+                overflow: 'hidden',
+                position: 'relative',
+                top: 0
+              }}
+            >
+              <ChatAssistant onSend={handleSend} messages={messages} loading={loading} error={error} />
+            </Grid>
+          </Grid>
+        </Container>
+      } />
+    </Routes>
   );
 }
 

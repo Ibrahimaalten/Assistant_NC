@@ -56,7 +56,7 @@ function D0Form({ tabKeyLabel }) {
 
   // --- Gestion des erreurs de validation (reste local à cette page) ---
   const [localErrors, setLocalErrors] = useState({});
-
+  const [apiStatus, setApiStatus] = useState(null); // Pour feedback utilisateur
 
   // --- Gestionnaire de Changement pour les Champs ---
   // MODIFIÉ: Ce gestionnaire met maintenant à jour le contexte via updateFormField.
@@ -93,13 +93,33 @@ function D0Form({ tabKeyLabel }) {
 
   // --- Gestionnaire de Sauvegarde ---
   // MODIFIÉ: Utilise sectionData pour le log.
-  const handleSave = () => {
-    if (validatePage()) {
-      console.log(`Données ${tabKeyLabel} à sauvegarder (issues du contexte):`, sectionData);
-      alert(`Données ${tabKeyLabel} (simulées) sauvegardées !`);
-    } else {
-      console.log("Validation échouée pour D0", localErrors);
+  const handleSubmitToAPI = async () => {
+    if (!validatePage()) {
+      return;
     }
+    setApiStatus(null);
+    try {
+      // On suppose que form8DData contient toutes les sections D0 à D8
+      // À adapter si l'API attend un format différent
+      const response = await fetch('/api/nonconformites', {
+        method: 'POST', // Pour la création. Pour modification: 'PUT' et ajouter l'ID
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(form8DData),
+      });
+      if (response.ok) {
+        setApiStatus('success');
+      } else {
+        setApiStatus('error');
+      }
+    } catch (error) {
+      setApiStatus('error');
+    }
+  };
+
+  const handleSave = () => {
+    handleSubmitToAPI();
   };
 
   // --- Logique de Navigation (Précédent/Suivant) ---
@@ -264,6 +284,13 @@ function D0Form({ tabKeyLabel }) {
 
         {/* --- Zone des Boutons --- */}
         <Grid item xs={12}>
+          {/* Feedback utilisateur API */}
+          {apiStatus === 'success' && (
+            <Typography color="success.main" sx={{ mb: 2 }}>Sauvegarde réussie !</Typography>
+          )}
+          {apiStatus === 'error' && (
+            <Typography color="error.main" sx={{ mb: 2 }}>Erreur lors de la sauvegarde. Veuillez réessayer.</Typography>
+          )}
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 4, pt:2, borderTop: '1px solid', borderColor: 'divider' }}>
             <Button
               variant="outlined"
