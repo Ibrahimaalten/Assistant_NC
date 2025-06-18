@@ -96,12 +96,13 @@ function ChatAssistant() {
         const lines = linesToProcess.split('\n').filter(line => line.trim() !== '');
 
         for (const line of lines) {
-          console.log('[CHAT ASSISTANT] Ligne brute à parser:', line);
+          const lineWithoutThink = line.replace(/<think>.*?<\/think>/g, '');
+          console.log('[CHAT ASSISTANT] Ligne brute à parser:', lineWithoutThink);
           let dataChunk;
           try { 
-            dataChunk = JSON.parse(line); 
+            dataChunk = JSON.parse(lineWithoutThink); 
           } catch (e) {
-            console.error('ERREUR PARSING JSON sur la ligne:', line, 'Erreur:', e);
+            console.error('ERREUR PARSING JSON sur la ligne:', lineWithoutThink, 'Erreur:', e);
             // Si une ligne est invalide, on peut l'ignorer ou afficher une erreur spécifique
             // setMessages(prev => [...prev, { id: uuidv4(), text: `Erreur de format de données reçues: ${line}`, sender: 'error' }]);
             continue; 
