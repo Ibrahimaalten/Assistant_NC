@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tabs, Tab, Box, Container, Typography, AppBar, Paper, Grid } from '@mui/material';
 // MODIFICATION : Importer les composants de React Router
-import { BrowserRouter as Router, Routes, Route, Link as RouterLink } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link as RouterLink, useParams, useLocation } from 'react-router-dom';
 
 // Importer le hook du contexte
-import { useForm8D } from './contexts/Form8DContext'; 
+import { useForm8D, initialForm8DData } from './contexts/Form8DContext'; 
 
 // Importer les composants de formulaire (pages D0 à D8)
 import D0Form from './pages/D0Form';
@@ -56,12 +56,38 @@ function TabPanel(props) {
 
 // MODIFICATION : Création d'un composant pour l'interface 8D et Chat
 const Form8DAndChatInterface = () => {
-  const { currentStepKey, setCurrentStepKey } = useForm8D();
-  // Les états messages, loading, error pour ChatAssistant doivent être gérés dans ChatAssistant lui-même
-  // ou via un contexte si partagés plus largement. Si ChatAssistant les prend en props, il faudra
-  // les remonter ou utiliser un contexte. Pour simplifier, on assume que ChatAssistant les gère.
-  // Si tu gardes les états `messages`, `loading`, `error` dans App, il faudra les passer ici en props à ChatAssistant.
-  // Pour l'instant, je retire les props passées à ChatAssistant en supposant qu'il est autonome.
+  const { currentStepKey, setCurrentStepKey, setForm8DData } = useForm8D();
+  const { id } = useParams();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.pathname === '/') {
+      // Réinitialiser le contexte si on est sur la création
+      setForm8DData(initialForm8DData);
+    } else if (id) {
+      // Charger la non-conformité depuis l'API et pré-remplir le contexte
+      fetch(`/api/nonconformites/${id}`)
+        .then(res => res.json())
+        .then(data => {
+          // Adapter ici si la structure backend diffère
+          setForm8DData({
+            d0_initialisation: {
+              referenceNC: data.referenceNC,
+              dateDetection: data.dateDetection,
+              dateCreation: data.dateCreation,
+              produitRef: data.produitRef,
+              LieuDetection: data.LieuDetection,
+              detectePar: data.detectePar,
+              descriptionInitiale: data.descriptionInitiale,
+              Criticite: data.Criticite,
+              FonctionCrea: data.FonctionCrea,
+            },
+            // ...initialiser les autres sections si besoin
+            currentStepKey: 'd0_initialisation',
+          });
+        });
+    }
+  }, [id, setForm8DData, location.pathname]);
 
   const activeTabIndex = Math.max(0, tabDefinitions.findIndex(tab => tab.key === currentStepKey));
 
@@ -156,6 +182,9 @@ function App() {
 
           {/* La route pour le Dashboard */}
           <Route path="/dashboard" element={<Dashboard />} />
+
+          {/* Route pour la résolution d'une NC existante */}
+          <Route path="/resolution/:id" element={<Form8DAndChatInterface />} />
           
           {/* Optionnel: une route pour les URL non trouvées */}
           <Route path="*" element={

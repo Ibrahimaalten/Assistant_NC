@@ -1,73 +1,199 @@
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, ForeignKey, Text
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, relationship
-from datetime import datetime
+# backend/schemas.py (ou un nom similaire)
 
-DATABASE_URL = "sqlite:///./nonconformites.db"
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
+from pydantic import BaseModel, Field, field_validator
+from typing import Optional, List, Dict, Any # Any est enlevé, on va essayer d'être plus précis
+from datetime import datetime, date # Importe date aussi pour les champs de type date
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy.orm import relationship
+from backend.database import Base
 
+# --- Modèles SQLAlchemy ---
 class NonConformite(Base):
     __tablename__ = "nonconformites"
     id = Column(Integer, primary_key=True, index=True)
-    # D0
     referenceNC = Column(String, nullable=False)
-    dateDetection = Column(String, nullable=False)
-    dateCreation = Column(String, nullable=False)
-    produitRef = Column(String, nullable=False)
-    LieuDetection = Column(String, nullable=False)
-    detectePar = Column(String, nullable=True)
-    descriptionInitiale = Column(String, nullable=False)
-    Criticite = Column(String, nullable=True)
-    FonctionCrea = Column(String, nullable=False)
-    # D1
-    chefEquipe_prenom = Column(String, nullable=True)
-    chefEquipe_nom = Column(String, nullable=True)
-    chefEquipe_support = Column(String, nullable=True)
-    sponsor = Column(String, nullable=True)
-    membres = relationship("MembreEquipe", back_populates="nonconformite", cascade="all, delete-orphan")
-    # D2
-    description_qui = Column(String, nullable=True)
-    description_quoi = Column(String, nullable=True)
-    description_ou = Column(String, nullable=True)
-    description_quand = Column(String, nullable=True)
-    description_comment = Column(String, nullable=True)
-    description_combien = Column(String, nullable=True)
-    description_pourquoi = Column(String, nullable=True)
-    # D3
-    actions3D = Column(Text, nullable=True)  # JSON string (liste d'actions)
-    # D4
-    ishikawaData = Column(Text, nullable=True)  # JSON string
-    fiveWhysData = Column(Text, nullable=True)  # JSON string
-    causesRacinesIdentifiees = Column(Text, nullable=True)
-    verificationCauses = Column(Text, nullable=True)
-    # D5
-    actionsCorrectives = Column(Text, nullable=True)  # JSON string
-    rootCausesSelectionnees = Column(Text, nullable=True)  # JSON string
-    # D6
-    actionsImplantation = Column(Text, nullable=True)  # JSON string
-    commentairesImplantation = Column(Text, nullable=True)
-    # D7
-    actionsPreventives = Column(Text, nullable=True)  # JSON string
-    rootCausesPreventSelectionnees = Column(Text, nullable=True)  # JSON string
-    # D8
-    resumeResultats = Column(Text, nullable=True)
-    leconsApprises = Column(Text, nullable=True)
-    dateCloture = Column(String, nullable=True)
-    teamRecognitionMessage = Column(Text, nullable=True)
-    # Général
-    statut = Column(String, nullable=False, default="En cours")
-    date_resolution = Column(DateTime, nullable=True)
+    dateDetection = Column(String)
+    dateCreation = Column(String)
+    produitRef = Column(String)
+    LieuDetection = Column(String)
+    detectePar = Column(String)
+    descriptionInitiale = Column(String)
+    Criticite = Column(String)
+    FonctionCrea = Column(String)
+    statut = Column(String, default="Ouvert")
     date_creation = Column(DateTime, default=datetime.utcnow)
+    date_resolution = Column(DateTime, nullable=True)
+    membres = relationship("MembreEquipe", back_populates="nonconformite", cascade="all, delete-orphan")
 
 class MembreEquipe(Base):
     __tablename__ = "membres_equipe"
     id = Column(Integer, primary_key=True, index=True)
-    nonconformite_id = Column(Integer, ForeignKey('nonconformites.id'))
-    prenom = Column(String, nullable=False)
     nom = Column(String, nullable=False)
-    fonction = Column(String, nullable=True)
+    role = Column(String)
+    nonconformite_id = Column(Integer, ForeignKey("nonconformites.id"))
     nonconformite = relationship("NonConformite", back_populates="membres")
 
-Base.metadata.create_all(bind=engine)
+
+# --- Schémas pour MembreEquipe ---
+class MembreEquipeBase(BaseModel):
+    prenom: str
+    nom: str
+    fonction: Optional[str] = None
+
+class MembreEquipeCreate(MembreEquipeBase):
+    pass # Pas de champs supplémentaires pour la création pour l'instant
+
+class MembreEquipeInDB(MembreEquipeBase):
+    id: int
+    # nonconformite_id: int # Pas toujours nécessaire de l'exposer au client
+
+    class Config:
+        from_attributes = True # Pour Pydantic v2 (remplace orm_mode)
+
+# --- Schémas pour NonConformite ---
+# On va créer des sous-modèles Pydantic pour chaque section Dx pour la clarté
+# et pour correspondre à la structure de ton Form8DContext et de tes formulaires.
+
+class D0Data(BaseModel):
+    referenceNC: Optional[str] = None # Auparavant appelé identification_nc_0d dans Pydantic, correspond à referenceNC dans SQLAlchemy
+    dateDetection: Optional[str] = None # Garder en str si c'est ce que le frontend envoie/attend
+    dateCreation: Optional[str] = None  # Idem
+    produitRef: Optional[str] = None
+    LieuDetection: Optional[str] = None
+    detectePar: Optional[str] = None
+    descriptionInitiale: Optional[str] = None # Auparavant description_probleme_0d, correspond à descriptionInitiale
+    Criticite: Optional[str] = None # Si c'est une chaîne, sinon float/int
+    FonctionCrea: Optional[str] = None
+
+class D1Data(BaseModel):
+    chefEquipe_prenom: Optional[str] = None
+    chefEquipe_nom: Optional[str] = None
+    chefEquipe_support: Optional[str] = None
+    sponsor: Optional[str] = None
+    # Les membres seront gérés séparément ou via une liste de MembreEquipeCreate lors de la création/màj
+    # Pour la réponse, on aura une List[MembreEquipeInDB]
+
+class D2Data(BaseModel):
+    description_qui: Optional[str] = None
+    description_quoi: Optional[str] = None
+    description_ou: Optional[str] = None
+    description_quand: Optional[str] = None # Garder en str pour l'instant
+    description_comment: Optional[str] = None
+    description_combien: Optional[str] = None
+    description_pourquoi: Optional[str] = None
+
+class D3Data(BaseModel):
+    actions3D: Optional[str] = None # JSON string contenant une liste d'actions
+
+class D4Data(BaseModel):
+    ishikawaData: Optional[str] = None  # JSON string
+    fiveWhysData: Optional[str] = None  # JSON string
+    causesRacinesIdentifiees: Optional[str] = None # Peut-être une liste de str, donc JSON string
+    verificationCauses: Optional[str] = None
+
+class D5Data(BaseModel):
+    actionsCorrectives: Optional[str] = None  # JSON string
+    rootCausesSelectionnees: Optional[str] = None  # JSON string
+
+class D6Data(BaseModel):
+    actionsImplantation: Optional[str] = None  # JSON string
+    commentairesImplantation: Optional[str] = None
+
+class D7Data(BaseModel):
+    actionsPreventives: Optional[str] = None  # JSON string
+    rootCausesPreventSelectionnees: Optional[str] = None  # JSON string
+
+class D8Data(BaseModel):
+    resumeResultats: Optional[str] = None
+    leconsApprises: Optional[str] = None
+    dateCloture: Optional[str] = None # Garder en str pour l'instant
+    teamRecognitionMessage: Optional[str] = None
+
+# Modèle de base pour une NonConformite (champs communs ou minimaux)
+class NonConformiteBasePydantic(BaseModel): # Renommé pour éviter conflit avec le modèle SQLAlchemy
+    statut: Optional[str] = "Ouvert" # Statut par défaut lors de la création
+    # Les champs de D0 sont souvent les premiers à être remplis
+    d0_initialisation: Optional[D0Data] = Field(default_factory=D0Data)
+
+
+# Modèle pour la création d'une NonConformite
+class NonConformiteCreatePydantic(NonConformiteBasePydantic):
+    # À la création, on s'attend au moins aux données de D0.
+    # Les membres de l'équipe D1 peuvent être ajoutés plus tard ou ici.
+    d1_membres_a_creer: Optional[List[MembreEquipeCreate]] = []
+
+
+# Modèle pour la mise à jour (permet des mises à jour partielles)
+class NonConformiteUpdatePydantic(BaseModel):
+    statut: Optional[str] = None
+    d0_initialisation: Optional[D0Data] = None
+    d1_team: Optional[D1Data] = None # Pour les champs chefEquipe, sponsor
+    d1_membres_a_creer_ou_maj: Optional[List[MembreEquipeCreate]] = None # Pour ajouter/remplacer les membres
+    d2_problem: Optional[D2Data] = None
+    d3_containment: Optional[D3Data] = None
+    d4_rootcause: Optional[D4Data] = None
+    d5_correctiveactions: Optional[D5Data] = None
+    d6_implementvalidate: Optional[D6Data] = None
+    d7_preventrecurrence: Optional[D7Data] = None
+    d8_congratulate: Optional[D8Data] = None
+    date_resolution: Optional[datetime] = None
+
+
+# Modèle pour retourner une NonConformite depuis l'API (inclut l'ID et toutes les données)
+class NonConformiteInDBPydantic(NonConformiteBasePydantic): # Hérite de NonConformiteBasePydantic
+    id: int # L'ID de la base de données SQLAlchemy est un Integer
+    
+    # Champs de D0 (déjà dans NonConformiteBasePydantic via d0_initialisation)
+    # d0_initialisation: D0Data # Hérité et typé
+
+    # Champs de D1
+    d1_team: Optional[D1Data] = Field(default_factory=D1Data)
+    membres: List[MembreEquipeInDB] = [] # La relation SQLAlchemy devient une liste de modèles Pydantic
+
+    # Champs de D2
+    d2_problem: Optional[D2Data] = Field(default_factory=D2Data)
+    
+    # Champs de D3
+    d3_containment: Optional[D3Data] = Field(default_factory=D3Data)
+    
+    # Champs de D4
+    d4_rootcause: Optional[D4Data] = Field(default_factory=D4Data)
+    
+    # Champs de D5
+    d5_correctiveactions: Optional[D5Data] = Field(default_factory=D5Data)
+    
+    # Champs de D6
+    d6_implementvalidate: Optional[D6Data] = Field(default_factory=D6Data)
+    
+    # Champs de D7
+    d7_preventrecurrence: Optional[D7Data] = Field(default_factory=D7Data)
+    
+    # Champs de D8
+    d8_congratulate: Optional[D8Data] = Field(default_factory=D8Data)
+
+    date_creation: datetime
+    date_resolution: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True # Pour Pydantic v2 (remplace orm_mode pour la conversion SQLAlchemy -> Pydantic)
+
+    # Validateur pour s'assurer que les chaînes JSON sont bien des chaînes (optionnel, mais bonne pratique)
+    # Si tu veux que Pydantic valide le contenu JSON, tu devrais typer les champs en Dict ou List
+    # et gérer la sérialisation/désérialisation JSON dans des validateurs ou au niveau du service/CRUD.
+    # Pour l'instant, on les garde en `str` pour les champs JSON.
+
+    # @field_validator('actions3D', 'ishikawaData', 'fiveWhysData', 'causesRacinesIdentifiees', 
+    #                  'verificationCauses', 'actionsCorrectives', 'rootCausesSelectionnees',
+    #                  'actionsImplantation', 'actionsPreventives', 'rootCausesPreventSelectionnees', mode='before')
+    # @classmethod
+    # def ensure_json_string(cls, value):
+    #     if value is None:
+    #         return None
+    #     if not isinstance(value, str):
+    #         # Tentative de conversion en chaîne JSON si c'est un dict/list (pourrait arriver de la DB)
+    #         try:
+    #             return json.dumps(value)
+    #         except TypeError:
+    #             raise ValueError('Field must be a valid JSON string or serializable to JSON')
+    #     # Tu pourrais ajouter une validation pour s'assurer que c'est un JSON valide ici si besoin
+    #     return value

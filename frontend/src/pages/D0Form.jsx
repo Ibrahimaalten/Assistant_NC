@@ -92,21 +92,34 @@ function D0Form({ tabKeyLabel }) {
   };
 
   // --- Gestionnaire de Sauvegarde ---
-  // MODIFIÉ: Utilise sectionData pour le log.
+  // Envoie tous les champs D0 à l'API
   const handleSubmitToAPI = async () => {
     if (!validatePage()) {
       return;
     }
     setApiStatus(null);
     try {
-      // On suppose que form8DData contient toutes les sections D0 à D8
-      // À adapter si l'API attend un format différent
+      // On envoie tous les champs D0 attendus par l'API
+      const payload = {
+        referenceNC: sectionData.referenceNC,
+        dateDetection: sectionData.dateDetection,
+        dateCreation: sectionData.dateCreation,
+        produitRef: sectionData.produitRef,
+        LieuDetection: sectionData.LieuDetection,
+        detectePar: sectionData.detectePar,
+        descriptionInitiale: sectionData.descriptionInitiale,
+        Criticite: sectionData.Criticite,
+        FonctionCrea: sectionData.FonctionCrea,
+        statut: 'En cours', // Statut initial
+        date_creation: sectionData.dateCreation,
+        date_resolution: null
+      };
       const response = await fetch('/api/nonconformites', {
-        method: 'POST', // Pour la création. Pour modification: 'PUT' et ajouter l'ID
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(form8DData),
+        body: JSON.stringify(payload),
       });
       if (response.ok) {
         setApiStatus('success');

@@ -1,13 +1,16 @@
-from fastapi import FastAPI, Request, HTTPException, Depends, Body
+from fastapi import FastAPI, HTTPException, Depends, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
-from pydantic import BaseModel, Field
-from typing import Dict, Any, Optional
+from typing import List
 import json
 import asyncio
-from backend.models import SessionLocal, NonConformite, MembreEquipe
+
+from backend.database import SessionLocal, engine
+from backend import models, schemas, crud
 from backend.query import query_documents_with_context
+
+models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
@@ -31,80 +34,52 @@ def get_db():
     finally:
         db.close()
 
-# --- ROUTES NON-CONFORMITES (ex-main.py) ---
-@app.get("/api/nonconformites/{nc_id}")
-def get_nonconformite(nc_id: int, db: Session = Depends(get_db)):
-    nc = db.query(NonConformite).filter(NonConformite.id == nc_id).first()
-    if not nc:
-        raise HTTPException(status_code=404, detail="Non-conformité non trouvée")
-    membres = db.query(MembreEquipe).filter(MembreEquipe.nonconformite_id == nc.id).all()
-    nc_dict = nc.__dict__.copy()
-    nc_dict['membres'] = [m.__dict__ for m in membres]
-    nc_dict.pop('_sa_instance_state', None)
-    return nc_dict
-
-@app.post("/api/nonconformites")
-def create_nonconformite(item: dict = Body(...), db: Session = Depends(get_db)):
-    membres_data = item.pop('membres', [])
-    nc = NonConformite(**item)
-    db.add(nc)
-    db.commit()
-    db.refresh(nc)
-    for membre in membres_data:
-        m = MembreEquipe(
-            nonconformite_id=nc.id,
-            prenom=membre.get('prenom', ''),
-            nom=membre.get('nom', ''),
-            fonction=membre.get('fonction', '')
-        )
-        db.add(m)
-    db.commit()
-    return get_nonconformite(nc.id, db)
-
-@app.put("/api/nonconformites/{nc_id}")
-def update_nonconformite(nc_id: int, item: dict = Body(...), db: Session = Depends(get_db)):
-    nc = db.query(NonConformite).filter(NonConformite.id == nc_id).first()
-    if not nc:
-        raise HTTPException(status_code=404, detail="Non-conformité non trouvée")
-    membres_data = item.pop('membres', None)
-    for key, value in item.items():
-        setattr(nc, key, value)
-    db.commit()
-    if membres_data is not None:
-        db.query(MembreEquipe).filter(MembreEquipe.nonconformite_id == nc.id).delete()
-        for membre in membres_data:
-            m = MembreEquipe(
-                nonconformite_id=nc.id,
-                prenom=membre.get('prenom', ''),
-                nom=membre.get('nom', ''),
-                fonction=membre.get('fonction', '')
-            )
-            db.add(m)
-        db.commit()
-    return get_nonconformite(nc.id, db)
-
-@app.get("/api/nonconformites")
+# --- ROUTES NON-CONFORMITES ---
+@app.get("/api/nonconformites", response_model=List[schemas.NonConformite])
 def list_nonconformites(db: Session = Depends(get_db)):
-    ncs = db.query(NonConformite).all()
-    result = []
-    for nc in ncs:
-        nc_dict = nc.__dict__.copy()
-        nc_dict.pop('_sa_instance_state', None)
-        membres = db.query(MembreEquipe).filter(MembreEquipe.nonconformite_id == nc.id).all()
-        nc_dict['membres'] = [m.__dict__ for m in membres]
-        result.append(nc_dict)
+    return crud.get_ncs(db)
+
+@app.get("/api/nonconformites/{nc_id}", response_model=schemas.NonConformite)
+def get_nonconformite(nc_id: int, db: Session = Depends(get_db)):
+    nc = crud.get_nc(db, nc_id)
+    if not nc:
+        raise HTTPException(status_code=404, detail="Non-conformité non trouvée")
+    return nc
+
+@app.post("/api/nonconformites", response_model=schemas.NonConformite)
+def create_nonconformite(nc: schemas.NonConformiteCreate, db: Session = Depends(get_db)):
+    print("[DEBUG] Reçu POST /api/nonconformites avec:", nc)
+    result = crud.create_nc(db, nc)
+    print("[DEBUG] NonConformite créée:", result)
     return result
+
+@app.put("/api/nonconformites/{nc_id}", response_model=schemas.NonConformite)
+def update_nonconformite(nc_id: int, nc: schemas.NonConformiteUpdate, db: Session = Depends(get_db)):
+    updated = crud.update_nc(db, nc_id, nc)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Non-conformité non trouvée")
+    return updated
 
 @app.delete("/api/nonconformites/{nc_id}")
 def delete_nonconformite(nc_id: int, db: Session = Depends(get_db)):
-    nc = db.query(NonConformite).filter(NonConformite.id == nc_id).first()
-    if not nc:
+    deleted = crud.delete_nc(db, nc_id)
+    if not deleted:
         raise HTTPException(status_code=404, detail="Non-conformité non trouvée")
-    db.delete(nc)
-    db.commit()
     return {"ok": True}
 
+# --- ROUTES MEMBRES EQUIPE (optionnel) ---
+@app.get("/api/membres", response_model=List[schemas.MembreEquipe])
+def list_membres(db: Session = Depends(get_db)):
+    return crud.get_membres(db)
+
+@app.post("/api/membres", response_model=schemas.MembreEquipe)
+def create_membre(membre: schemas.MembreEquipeCreate, db: Session = Depends(get_db)):
+    return crud.create_membre(db, membre)
+
 # --- CHAT ASSISTANT ---
+from pydantic import BaseModel, Field
+from typing import Dict, Any, Optional
+
 class QueryContextPayload(BaseModel):
     query: str
     form_data: Dict[str, Any] = Field(default_factory=dict)
