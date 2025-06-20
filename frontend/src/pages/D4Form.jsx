@@ -4,6 +4,7 @@ import { Box, Button, Typography, Grid, Tabs, Tab, Paper, TextField, Snackbar, A
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import SaveIcon from '@mui/icons-material/Save';
+import { useParams } from 'react-router-dom';
 
 // Importer les composants de section (vérifie les chemins)
 import IshikawaSection from '../components/4D/IshikawaSection';
@@ -182,10 +183,34 @@ function D4Form({ tabKeyLabel='D4', problemDescription = "Description du problè
         // Ajouter la logique de validation si besoin
         return true; // Simplifié
     };
+
+    // --- Gestionnaire de Sauvegarde vers l'API ---
+    const [apiStatus, setApiStatus] = useState(null); // Pour feedback utilisateur
+    const { id } = useParams();
+
+    const handleSubmitToAPI = async () => {
+        // Ajoutez ici la validation si besoin
+        setApiStatus(null);
+        try {
+            const method = id ? 'PUT' : 'POST';
+            const url = id ? `/api/nonconformites/${id}` : '/api/nonconformites';
+            const response = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(form8DData),
+            });
+            if (response.ok) {
+                setApiStatus('success');
+            } else {
+                setApiStatus('error');
+            }
+        } catch (error) {
+            setApiStatus('error');
+        }
+    };
+
     const handleSave = () => {
-        // TODO: Ajoutez ici la logique de validation si besoin
-        setSaveFeedback({ open: true, message: `Données ${tabKeyLabel} sauvegardées !`, severity: 'success' });
-        // ...sauvegarde réelle à implémenter...
+        handleSubmitToAPI();
     };
 
     const handleCloseSnackbar = () => setSaveFeedback(prev => ({ ...prev, open: false }));
@@ -257,36 +282,28 @@ function D4Form({ tabKeyLabel='D4', problemDescription = "Description du problè
                     {saveFeedback.message}
                 </Alert>
             </Snackbar>
-            {/* Barre de navigation et sauvegarde */}
+            <Grid item xs={12}>
+            {/* Feedback utilisateur API */}
+            {apiStatus === 'success' && (
+                <Typography color="success.main" sx={{ mb: 2 }}>Sauvegarde réussie !</Typography>
+            )}
+            {apiStatus === 'error' && (
+                <Typography color="error.main" sx={{ mb: 2 }}>Erreur lors de la sauvegarde. Veuillez réessayer.</Typography>
+            )}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 3 }}>
-                <Button
-                    variant="outlined"
-                    startIcon={<NavigateBeforeIcon />}
-                    onClick={handlePrevious}
-                    disabled={currentIndex === 0}
-                >
+                <Button variant="outlined" startIcon={<NavigateBeforeIcon />} onClick={handlePrevious} disabled={currentIndex === 0}>
                     Précédent
                 </Button>
                 <Box>
-                    <Button
-                        variant="contained"
-                        color="primary"
-                        startIcon={<SaveIcon />}
-                        onClick={handleSave}
-                        sx={{ mr: 1 }}
-                    >
+                    <Button variant="contained" color="primary" startIcon={<SaveIcon />} onClick={handleSave} sx={{ mr: 1 }}>
                         Sauvegarder {tabKeyLabel}
                     </Button>
-                    <Button
-                        variant="contained"
-                        endIcon={<NavigateNextIcon />}
-                        onClick={handleNext}
-                        disabled={currentIndex === stepsOrder.length - 1}
-                    >
+                    <Button variant="contained" endIcon={<NavigateNextIcon />} onClick={handleNext} disabled={currentIndex === stepsOrder.length - 1}>
                         Suivant
                     </Button>
                 </Box>
             </Box>
+        </Grid>
             {/* Préparation pour ChatAssistant (décommenter pour intégrer) */}
             {/* <Box sx={{ mt: 4 }}><ChatAssistant /></Box> */}
         </Box>

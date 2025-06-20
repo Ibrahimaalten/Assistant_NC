@@ -5,6 +5,7 @@ import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import SaveIcon from '@mui/icons-material/Save';
 import { useForm8D } from '../contexts/Form8DContext'; // Assurez-vous que ce chemin est correct
+import { useParams } from 'react-router-dom';
 
 // L'ordre des étapes doit être cohérent avec tabDefinitions dans App.jsx
 // et les clés dans Form8DContext.js
@@ -29,6 +30,7 @@ function D0Form({ tabKeyLabel }) {
     setCurrentStepKey,  // Fonction pour changer d'étape/onglet
     currentStepKey      // La clé de l'étape actuellement active
   } = useForm8D();
+  const { id } = useParams();
 
   // --- DÉFINITION de la Clé de Section ---
   // MODIFIÉ/AJOUTÉ: Constante pour la clé de cette section dans le contexte.
@@ -56,7 +58,7 @@ function D0Form({ tabKeyLabel }) {
 
   // --- Gestion des erreurs de validation (reste local à cette page) ---
   const [localErrors, setLocalErrors] = useState({});
-
+  const [apiStatus, setApiStatus] = useState(null); // Pour feedback utilisateur
 
   // --- Gestionnaire de Changement pour les Champs ---
   // MODIFIÉ: Ce gestionnaire met maintenant à jour le contexte via updateFormField.
@@ -92,14 +94,48 @@ function D0Form({ tabKeyLabel }) {
   };
 
   // --- Gestionnaire de Sauvegarde ---
-  // MODIFIÉ: Utilise sectionData pour le log.
-  const handleSave = () => {
-    if (validatePage()) {
-      console.log(`Données ${tabKeyLabel} à sauvegarder (issues du contexte):`, sectionData);
-      alert(`Données ${tabKeyLabel} (simulées) sauvegardées !`);
-    } else {
-      console.log("Validation échouée pour D0", localErrors);
+  // Envoie tous les champs D0 à l'API
+  const handleSubmitToAPI = async () => {
+    if (!validatePage()) {
+      return;
     }
+    setApiStatus(null);
+    try {
+      const payload = {
+        d0_initialisation: {
+          referenceNC: sectionData.referenceNC,
+          dateDetection: sectionData.dateDetection,
+          dateCreation: sectionData.dateCreation,
+          produitRef: sectionData.produitRef,
+          LieuDetection: sectionData.LieuDetection,
+          detectePar: sectionData.detectePar,
+          descriptionInitiale: sectionData.descriptionInitiale,
+          Criticite: sectionData.Criticite,
+          FonctionCrea: sectionData.FonctionCrea
+        },
+        statut: 'En cours',
+      };
+      const method = id ? 'PUT' : 'POST';
+      const url = id ? `/api/nonconformites/${id}` : '/api/nonconformites';
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+      if (response.ok) {
+        setApiStatus('success');
+      } else {
+        setApiStatus('error');
+      }
+    } catch (error) {
+      setApiStatus('error');
+    }
+  };
+
+  const handleSave = () => {
+    handleSubmitToAPI();
   };
 
   // --- Logique de Navigation (Précédent/Suivant) ---
@@ -264,6 +300,13 @@ function D0Form({ tabKeyLabel }) {
 
         {/* --- Zone des Boutons --- */}
         <Grid item xs={12}>
+          {/* Feedback utilisateur API */}
+          {apiStatus === 'success' && (
+            <Typography color="success.main" sx={{ mb: 2 }}>Sauvegarde réussie !</Typography>
+          )}
+          {apiStatus === 'error' && (
+            <Typography color="error.main" sx={{ mb: 2 }}>Erreur lors de la sauvegarde. Veuillez réessayer.</Typography>
+          )}
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 4, pt:2, borderTop: '1px solid', borderColor: 'divider' }}>
             <Button
               variant="outlined"

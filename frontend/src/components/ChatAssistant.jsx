@@ -214,7 +214,7 @@ function ChatAssistant() {
               display: 'flex', 
               mb: 1.5, 
               flexDirection: msg.sender === 'user' ? 'row-reverse' : 'row', 
-              alignItems: 'flex-end' // Aligner en bas pour un look plus "chat"
+              alignItems: 'flex-end'
             }}
           >
             <Avatar 
@@ -225,7 +225,7 @@ function ChatAssistant() {
                 color: 'white',
                 ml: msg.sender === 'user' ? 1 : 0, 
                 mr: msg.sender === 'user' ? 0 : 1,
-                width: 32, height: 32, fontSize: '0.8rem' // Plus petit avatar
+                width: 32, height: 32, fontSize: '0.8rem'
               }}
             >
               {msg.sender === 'user' ? 'U' : (msg.sender === 'error' ? 'E' : (msg.sender === 'system' ? 'S' : 'A'))}
@@ -237,11 +237,11 @@ function ChatAssistant() {
                          (msg.sender === 'system' ? 'info.light' : 'grey.100')),
                 color: msg.sender === 'user' ? 'primary.contrastText' : 'text.primary',
                 p: 1.5, 
-                borderRadius: msg.sender === 'user' ? '15px 15px 0 15px' : '15px 15px 15px 0', // Bulles de chat classiques
+                borderRadius: msg.sender === 'user' ? '15px 15px 0 15px' : '15px 15px 15px 0',
                 maxWidth: '75%', 
                 boxShadow: 1, 
                 position: 'relative',
-                wordBreak: 'break-word' // Pour les longs mots/urls
+                wordBreak: 'break-word'
               }}
             >
               {msg.isLoading && msg.sender === 'bot' && (
@@ -257,13 +257,11 @@ function ChatAssistant() {
                   }} 
                 />
               )}
-              
               {msg.htmlText ? 
                 <div dangerouslySetInnerHTML={{ __html: msg.htmlText }} /> 
                 : 
                 <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>{msg.text}</Typography>
               }
-
               {msg.isSuggestion && msg.suggestionDetails && (
                 <button
                   onClick={() => applyFieldSuggestion(msg.suggestionDetails.section, msg.suggestionDetails.field, msg.suggestionDetails.value)}
@@ -273,7 +271,7 @@ function ChatAssistant() {
                     padding: '6px 12px', 
                     fontSize: '0.875rem', 
                     cursor: 'pointer', 
-                    backgroundColor: '#4CAF50', // Vert
+                    backgroundColor: '#4CAF50',
                     color: 'white', 
                     border: 'none', 
                     borderRadius: '4px',
@@ -294,7 +292,7 @@ function ChatAssistant() {
           placeholder="Posez votre question..."
           value={userInput}
           onChange={handleInputChange}
-          onKeyDown={e => {if (e.key === 'Enter' && !e.shiftKey) { handleSendMessage(e); e.preventDefault();}}} // Envoyer avec Entrée (pas Shift+Entrée)
+          onKeyDown={e => {if (e.key === 'Enter' && !e.shiftKey) { handleSendMessage(e); e.preventDefault();}}}
           disabled={isOverallLoading}
           size="small"
           variant="outlined"

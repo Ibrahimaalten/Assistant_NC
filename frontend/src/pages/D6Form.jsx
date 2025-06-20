@@ -5,6 +5,7 @@ import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import SaveIcon from '@mui/icons-material/Save';
 import { useForm8D } from '../contexts/Form8DContext';
+import { useParams } from 'react-router-dom';
 
 // Importer le composant pour la liste des actions
 import ActionImplementationList from '../components/6D/ActionImplementationList';
@@ -27,6 +28,7 @@ function D6Form({
 }) {
   const { setCurrentStepKey, currentStepKey } = useForm8D();
   const currentIndex = stepsOrder.indexOf(currentStepKey);
+  const { id } = useParams();
 
   // --- DONNÉES D'EXEMPLE POUR LES ACTIONS D5 (utilisées si d5ActionsData est vide) ---
   const sampleD5ActionsData = {
@@ -141,6 +143,34 @@ function D6Form({
   // --- Ajout du handler pour fermer le Snackbar (manquant) ---
   const handleCloseSnackbar = () => setSaveFeedback(prev => ({ ...prev, open: false }));
 
+  // --- Gestionnaire de Sauvegarde vers l'API ---
+  const [apiStatus, setApiStatus] = useState(null); // Pour feedback utilisateur
+
+  const handleSubmitToAPI = async () => {
+    // Ajoutez ici la validation si besoin
+    setApiStatus(null);
+    try {
+      const method = id ? 'PUT' : 'POST';
+      const url = id ? `/api/nonconformites/${id}` : '/api/nonconformites';
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form8DData),
+      });
+      if (response.ok) {
+        setApiStatus('success');
+      } else {
+        setApiStatus('error');
+      }
+    } catch (error) {
+      setApiStatus('error');
+    }
+  };
+
+  const handleSave = () => {
+    handleSubmitToAPI();
+  };
+
   // --- Rendu (inchangé) ---
   return (
     <Box component="div" sx={{ p: 2, maxWidth: 900, margin: '0 auto' }}>
@@ -154,9 +184,9 @@ function D6Form({
         <ActionImplementationList actionsByRootCause={implementedActions} onActionUpdate={handleActionUpdate} />
       </Paper>
       {/* Zone de feedback utilisateur */}
-      <Snackbar open={saveFeedback.open} autoHideDuration={3000} onClose={handleCloseSnackbar} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
-        <Alert onClose={handleCloseSnackbar} severity={saveFeedback.severity} sx={{ width: '100%' }}>
-          {saveFeedback.message}
+      <Snackbar open={saveFeedback.open || !!apiStatus} autoHideDuration={3000} onClose={handleCloseSnackbar} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+        <Alert onClose={handleCloseSnackbar} severity={apiStatus === 'success' ? 'success' : apiStatus === 'error' ? 'error' : saveFeedback.severity} sx={{ width: '100%' }}>
+          {apiStatus === 'success' ? 'Sauvegarde réussie !' : apiStatus === 'error' ? 'Erreur lors de la sauvegarde. Veuillez réessayer.' : saveFeedback.message}
         </Alert>
       </Snackbar>
       {/* Barre de navigation et sauvegarde */}

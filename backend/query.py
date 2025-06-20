@@ -128,7 +128,7 @@ async def query_documents_with_context(query_text: str, form_data: dict, current
         context_to_pass_to_llm = [Document(page_content="Information contextuelle non disponible.")]
 
     # 5. Préparation chaîne LLM
-    llm = ChatOllama(model="qwen3:14b", num_ctx=8192, temperature=0.5, base_url=ollama_endpoint)
+    llm = ChatOllama(model="qwen3:14b", num_ctx=8192, temperature=0.7, base_url=ollama_endpoint)
     selected_prompt = detect_prompt(query_text, step=current_section_name if 'step' in detect_prompt.__code__.co_varnames else None)
 
     # LOG PROMPT COMPLET

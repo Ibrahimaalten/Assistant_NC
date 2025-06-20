@@ -5,6 +5,7 @@ import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import SaveIcon from '@mui/icons-material/Save';
 import { useForm8D } from '../contexts/Form8DContext';
+import { useParams } from 'react-router-dom';
 
 // Importer les sous-composants 7D
 import RootCausePreventSelector from '../components/7D/RootCausePreventSelector';
@@ -32,6 +33,7 @@ function D7Form({
   onSaveD7
 }) {
   const { setCurrentStepKey, currentStepKey } = useForm8D();
+  const { id } = useParams();
 
   // --- DONNÉES D'EXEMPLE POUR TEST ---
   const sampleRootCausesForTesting = [
@@ -127,11 +129,32 @@ function D7Form({
     if (name === 'systemicChanges') setSystemicChanges(value);
   };
 
-  // --- Sauvegarde D7 ---
+  // --- Gestionnaire de Sauvegarde vers l'API ---
+  const [apiStatus, setApiStatus] = useState(null); // Pour feedback utilisateur
+
+  const handleSubmitToAPI = async () => {
+    // Ajoutez ici la validation si besoin
+    setApiStatus(null);
+    try {
+      const method = id ? 'PUT' : 'POST';
+      const url = id ? `/api/nonconformites/${id}` : '/api/nonconformites';
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form8DData),
+      });
+      if (response.ok) {
+        setApiStatus('success');
+      } else {
+        setApiStatus('error');
+      }
+    } catch (error) {
+      setApiStatus('error');
+    }
+  };
+
   const handleSave = () => {
-    // TODO: Ajoutez ici la logique de validation si besoin
-    setSaveFeedback({ open: true, message: `Données ${tabKeyLabel} sauvegardées !`, severity: 'success' });
-    // ...sauvegarde réelle à implémenter...
+    handleSubmitToAPI();
   };
 
   const handleCloseSnackbar = () => setSaveFeedback(prev => ({ ...prev, open: false }));
@@ -234,9 +257,9 @@ function D7Form({
       </Grid>
 
       {/* Zone de feedback utilisateur */}
-      <Snackbar open={saveFeedback.open} autoHideDuration={3000} onClose={handleCloseSnackbar} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
-        <Alert onClose={handleCloseSnackbar} severity={saveFeedback.severity} sx={{ width: '100%' }}>
-          {saveFeedback.message}
+      <Snackbar open={saveFeedback.open || !!apiStatus} autoHideDuration={3000} onClose={handleCloseSnackbar} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+        <Alert onClose={handleCloseSnackbar} severity={apiStatus === 'success' ? 'success' : apiStatus === 'error' ? 'error' : saveFeedback.severity} sx={{ width: '100%' }}>
+          {apiStatus === 'success' ? 'Sauvegarde réussie !' : apiStatus === 'error' ? 'Erreur lors de la sauvegarde. Veuillez réessayer.' : saveFeedback.message}
         </Alert>
       </Snackbar>
 
