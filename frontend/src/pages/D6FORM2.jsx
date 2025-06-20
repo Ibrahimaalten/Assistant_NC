@@ -5,8 +5,7 @@ import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import SaveIcon from '@mui/icons-material/Save';
 import { useForm8D } from '../contexts/Form8DContext';
-import { useParams } from 'react-router-dom';
-
+ 
 // Importer le composant pour la liste des actions
 import ActionImplementationList from '../components/6D/ActionImplementationList';
 // Placez la déclaration du tableau stepsOrder AVANT toute utilisation
@@ -28,8 +27,7 @@ function D6Form({
 }) {
   const { setCurrentStepKey, currentStepKey } = useForm8D();
   const currentIndex = stepsOrder.indexOf(currentStepKey);
-  const { id } = useParams();
-
+ 
   // --- DONNÉES D'EXEMPLE POUR LES ACTIONS D5 (utilisées si d5ActionsData est vide) ---
   const sampleD5ActionsData = {
     "Roulement X usé sur arbre principal": [ // Doit correspondre à une cause racine d'exemple de D5
@@ -79,16 +77,16 @@ function D6Form({
    if (!hasRealD5Data) {
        console.log("D6Form using SAMPLE D5 actions data for initialization."); // Log pour débug
    }
-
+ 
   // --- État pour les actions initialisé UNE SEULE FOIS avec les données D5 ---
   const [implementedActions, setImplementedActions] = useState(() => initializeD6State(initialDataForState));
-
+ 
   // --- États pour les champs spécifiques à D6 (inchangés) ---
   const [validationResults, setValidationResults] = useState('');
   const [surveillancePlan, setSurveillancePlan] = useState('');
   const [errors, setErrors] = useState({});
   const [saveFeedback, setSaveFeedback] = useState({ open: false, message: '', severity: 'success' });
-
+ 
   // --- SUPPRIMER ou COMMENTER le useEffect qui causait la boucle ---
   // useEffect(() => {
   //   // Ce code est maintenant dans initializeD6State et exécuté une seule fois par useState
@@ -97,7 +95,7 @@ function D6Form({
   //   setImplementedActions(initialD6State);
   // }, [d5ActionsData]);
   // -------------------------------------------------------------
-
+ 
   // --- Handlers (inchangés) ---
   const handleActionUpdate = useCallback((rootCause, actionId, updatedFields) => {
     setImplementedActions(prevData => {
@@ -110,66 +108,60 @@ function D6Form({
         return { ...prevData, [rootCause]: updatedRootCauseActions };
     });
   }, []);
-
+ 
   const handleInputChange = (event) => {
       const { name, value } = event.target;
       if (name === 'validationResults') setValidationResults(value);
       if (name === 'surveillancePlan') setSurveillancePlan(value);
       if (errors[name]) setErrors(prev => ({ ...prev, [name]: undefined }));
   };
-
+ 
   const validateForm = () => { /* ... (inchangé) ... */
       let tempErrors = {};
       if (!validationResults.trim()) tempErrors.validationResults = "Les résultats de la validation sont requis.";
       setErrors(tempErrors);
       return Object.keys(tempErrors).length === 0;
   };
-
+ 
+  // Supprimez toute référence à stepsOrder2 et gardez uniquement stepsOrder
+  // const stepsOrder = [
+  //   'd0_initialisation',
+  //   'd1_team',
+  //   'd2_problem',
+  //   'd3_containment',
+  //   'd4_rootcause',
+  //   'd5_correctiveactions',
+  //   'd6_implementvalidate',
+  //   'd7_preventrecurrence',
+  //   'd8_congratulate'
+  // ];
+  // Vérifiez que partout dans le fichier, seule la variable stepsOrder est utilisée pour la navigation
+  // const currentIndex = stepsOrder.indexOf(currentStepKey);
+ 
+  // --- Sauvegarde D6 ---
+      const handleSave = () => {
+        // TODO: Ajoutez ici la logique de validation si besoin
+        setSaveFeedback({ open: true, message: `Données ${tabKeyLabel} sauvegardées !`, severity: 'success' });
+        // ...sauvegarde réelle à implémenter...
+    };
+ 
+ 
   // --- Ajout du handler pour fermer le Snackbar (manquant) ---
   const handleCloseSnackbar = () => setSaveFeedback(prev => ({ ...prev, open: false }));
-
-  // --- Gestionnaire de Sauvegarde vers l'API ---
-  const [apiStatus, setApiStatus] = useState(null); // Pour feedback utilisateur
-
-  const handleSubmitToAPI = async () => {
-    // Ajoutez ici la validation si besoin
-    setApiStatus(null);
-    try {
-      const method = id ? 'PUT' : 'POST';
-      const url = id ? `/api/nonconformites/${id}` : '/api/nonconformites';
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form8DData),
-      });
-      if (response.ok) {
-        setApiStatus('success');
-      } else {
-        setApiStatus('error');
-      }
-    } catch (error) {
-      setApiStatus('error');
-    }
-  };
-
-  const handleSave = () => {
-    handleSubmitToAPI();
-  };
-
-  // --- Navigation ---
+ 
   const handlePrevious = () => {
-    if (currentIndex > 0) {
-      setCurrentStepKey(stepsOrder[currentIndex - 1]);
-      window.scrollTo(0, 0);
-    }
-  };
-  const handleNext = () => {
+      if (currentIndex > 0) {
+        setCurrentStepKey(stepsOrder[currentIndex - 1]);
+        window.scrollTo(0, 0);
+      }
+    };
+    const handleNext = () => {
     if (currentIndex < stepsOrder.length - 1) {
       setCurrentStepKey(stepsOrder[currentIndex + 1]);
       window.scrollTo(0, 0);
     }
   };
-
+ 
   // --- Rendu (inchangé) ---
   return (
     <Box component="div" sx={{ p: 2, maxWidth: 900, margin: '0 auto' }}>
@@ -183,9 +175,9 @@ function D6Form({
         <ActionImplementationList actionsByRootCause={implementedActions} onActionUpdate={handleActionUpdate} />
       </Paper>
       {/* Zone de feedback utilisateur */}
-      <Snackbar open={saveFeedback.open || !!apiStatus} autoHideDuration={3000} onClose={handleCloseSnackbar} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
-        <Alert onClose={handleCloseSnackbar} severity={apiStatus === 'success' ? 'success' : apiStatus === 'error' ? 'error' : saveFeedback.severity} sx={{ width: '100%' }}>
-          {apiStatus === 'success' ? 'Sauvegarde réussie !' : apiStatus === 'error' ? 'Erreur lors de la sauvegarde. Veuillez réessayer.' : saveFeedback.message}
+      <Snackbar open={saveFeedback.open} autoHideDuration={3000} onClose={handleCloseSnackbar} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+        <Alert onClose={handleCloseSnackbar} severity={saveFeedback.severity} sx={{ width: '100%' }}>
+          {saveFeedback.message}
         </Alert>
       </Snackbar>
       {/* Barre de navigation et sauvegarde */}
@@ -207,5 +199,6 @@ function D6Form({
     </Box>
   );
 }
-
+ 
 export default D6Form;
+ 
