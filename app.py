@@ -49,6 +49,7 @@ def get_nonconformite(nc_id: int, db: Session = Depends(get_db)):
 @app.post("/api/nonconformites", response_model=schemas.NonConformite)
 def create_nonconformite(nc: schemas.NonConformiteCreate, db: Session = Depends(get_db)):
     print("[DEBUG] Reçu POST /api/nonconformites avec:", nc)
+    print("[DEBUG] Détail du dict envoyé:", nc.dict())
     result = crud.create_nc(db, nc)
     print("[DEBUG] NonConformite créée:", result)
     return result

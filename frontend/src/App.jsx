@@ -69,20 +69,10 @@ const Form8DAndChatInterface = () => {
       fetch(`/api/nonconformites/${id}`)
         .then(res => res.json())
         .then(data => {
-          // Adapter ici si la structure backend diffère
+          // Harmonisation : injecter toutes les sections telles que reçues du backend
           setForm8DData({
-            d0_initialisation: {
-              referenceNC: data.referenceNC,
-              dateDetection: data.dateDetection,
-              dateCreation: data.dateCreation,
-              produitRef: data.produitRef,
-              LieuDetection: data.LieuDetection,
-              detectePar: data.detectePar,
-              descriptionInitiale: data.descriptionInitiale,
-              Criticite: data.Criticite,
-              FonctionCrea: data.FonctionCrea,
-            },
-            // ...initialiser les autres sections si besoin
+            ...initialForm8DData, // Garantit toutes les clés même si certaines sont absentes
+            ...data,              // Ecrase avec les valeurs récupérées du backend
             currentStepKey: 'd0_initialisation',
           });
         });

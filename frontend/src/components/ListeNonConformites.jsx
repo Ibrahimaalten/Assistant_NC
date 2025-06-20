@@ -41,8 +41,8 @@ function ListeNonConformites() {
           ) : filtered.map(nc => (
             <tr key={nc.id} style={{ borderBottom: '1px solid #eee' }}>
               <td style={{ padding: '1rem' }}>{nc.id}</td>
-              <td>{nc.descriptionInitiale}</td>
-              <td>{nc.chefEquipe_prenom || ''} {nc.chefEquipe_nom || ''}</td>
+              <td>{nc.d0_initialisation?.descriptionInitiale || ''}</td>
+              <td>{nc.d1_team?.chefEquipe?.prenom || ''} {nc.d1_team?.chefEquipe?.nom || ''}</td>
               <td>
                 <span style={{
                   color: nc.statut === 'En cours' ? '#008BBD' : '#43e97b',

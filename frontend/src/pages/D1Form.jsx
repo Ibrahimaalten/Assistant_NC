@@ -11,6 +11,7 @@ import CardActions from '@mui/material/CardActions';
 import IconButton from '@mui/material/IconButton';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import { useParams } from 'react-router-dom';
 
 // Assurez-vous que les chemins d'importation sont corrects
 import ChefEquipe from '../components/EquipeD1/ChefEquipe'; // Renommé pour correspondre au nom du fichier
@@ -39,6 +40,7 @@ function D1Form({ tabKeyLabel = "D1" }) {
     setCurrentStepKey,
     currentStepKey,
   } = useForm8D();
+  const { id } = useParams();
 
   const SECTION_KEY = 'd1_team';
   const sectionData = form8DData[SECTION_KEY] || {
@@ -104,11 +106,29 @@ function D1Form({ tabKeyLabel = "D1" }) {
   const handleSubmitToAPI = async () => {
     if (!validatePage()) return;
     setApiStatus(null);
+    const cleanedForm8DData = {
+      ...form8DData,
+      d1_team: {
+        chefEquipe: {
+          prenom: sectionData.chefEquipe?.prenom || '',
+          nom: sectionData.chefEquipe?.nom || '',
+          support: sectionData.chefEquipe?.support || ''
+        },
+        membresEquipe: (sectionData.membresEquipe || []).map(m => ({
+          prenom: m.prenom || '',
+          nom: m.nom || '',
+          fonction: m.fonction || ''
+        })),
+        Sponsor: sectionData.Sponsor || ''
+      }
+    };
     try {
-      const response = await fetch('/api/nonconformites', {
-        method: 'POST',
+      const method = id ? 'PUT' : 'POST';
+      const url = id ? `/api/nonconformites/${id}` : '/api/nonconformites';
+      const response = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form8DData),
+        body: JSON.stringify(cleanedForm8DData),
       });
       if (response.ok) {
         setApiStatus('success');

@@ -5,6 +5,7 @@ import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import SaveIcon from '@mui/icons-material/Save';
 import { useForm8D } from '../contexts/Form8DContext';
+import { useParams } from 'react-router-dom';
 
 // Importer les sous-composants 7D
 import RootCausePreventSelector from '../components/7D/RootCausePreventSelector';
@@ -32,6 +33,7 @@ function D7Form({
   onSaveD7
 }) {
   const { setCurrentStepKey, currentStepKey } = useForm8D();
+  const { id } = useParams();
 
   // --- DONNÉES D'EXEMPLE POUR TEST ---
   const sampleRootCausesForTesting = [
@@ -134,8 +136,10 @@ function D7Form({
     // Ajoutez ici la validation si besoin
     setApiStatus(null);
     try {
-      const response = await fetch('/api/nonconformites', {
-        method: 'POST',
+      const method = id ? 'PUT' : 'POST';
+      const url = id ? `/api/nonconformites/${id}` : '/api/nonconformites';
+      const response = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form8DData),
       });

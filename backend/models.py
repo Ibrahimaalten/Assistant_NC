@@ -3,26 +3,27 @@
 from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List, Dict, Any # Any est enlevé, on va essayer d'être plus précis
 from datetime import datetime, date # Importe date aussi pour les champs de type date
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text
 from sqlalchemy.orm import relationship
+from sqlalchemy.types import JSON as SQLAlchemyJSON
 from backend.database import Base
 
 # --- Modèles SQLAlchemy ---
 class NonConformite(Base):
     __tablename__ = "nonconformites"
     id = Column(Integer, primary_key=True, index=True)
-    referenceNC = Column(String, nullable=False)
-    dateDetection = Column(String)
-    dateCreation = Column(String)
-    produitRef = Column(String)
-    LieuDetection = Column(String)
-    detectePar = Column(String)
-    descriptionInitiale = Column(String)
-    Criticite = Column(String)
-    FonctionCrea = Column(String)
     statut = Column(String, default="Ouvert")
     date_creation = Column(DateTime, default=datetime.utcnow)
     date_resolution = Column(DateTime, nullable=True)
+    d0_initialisation = Column(Text)  # JSON string (tous les champs D0)
+    d1_team = Column(Text)
+    d2_problem = Column(Text)
+    d3_containment = Column(Text)
+    d4_rootcause = Column(Text)
+    d5_correctiveactions = Column(Text)
+    d6_implementvalidate = Column(Text)
+    d7_preventrecurrence = Column(Text)
+    d8_congratulate = Column(Text)
     membres = relationship("MembreEquipe", back_populates="nonconformite", cascade="all, delete-orphan")
 
 class MembreEquipe(Base):

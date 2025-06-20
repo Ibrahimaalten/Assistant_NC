@@ -4,6 +4,7 @@ import { Box, Button, Typography, Grid, Paper, Snackbar, Alert } from '@mui/mate
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import SaveIcon from '@mui/icons-material/Save';
+import { useParams } from 'react-router-dom';
 
 // Importer les sous-composants D5 (vérifier les chemins)
 import RootCauseSelector from '../components/5D/RootCauseSelector';
@@ -33,6 +34,7 @@ function D5Form({
 }) {
   const { form8DData, updateSectionData, setCurrentStepKey, currentStepKey } = useForm8D();
   const SECTION_KEY = 'd5_correctiveactions';
+  const { id } = useParams();
 
   // Lire les causes racines depuis le contexte D4
   const d4Section = form8DData['d4_rootcause'] || {};
@@ -88,8 +90,10 @@ function D5Form({
     // Ajoutez ici la validation si besoin
     setApiStatus(null);
     try {
-      const response = await fetch('/api/nonconformites', {
-        method: 'POST',
+      const method = id ? 'PUT' : 'POST';
+      const url = id ? `/api/nonconformites/${id}` : '/api/nonconformites';
+      const response = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form8DData),
       });

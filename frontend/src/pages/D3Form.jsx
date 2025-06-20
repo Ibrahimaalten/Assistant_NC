@@ -4,6 +4,7 @@ import { Box, Button, Typography, Grid, FormHelperText, Paper, Snackbar, Alert }
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import SaveIcon from '@mui/icons-material/Save';
+import { useParams } from 'react-router-dom';
 
 // Importer le composant pour gérer les actions
 import GestionActions3D from '../components/3D/GestionActionsCorrectives'; // Assurez-vous que le chemin est correct
@@ -18,6 +19,7 @@ function D3Form({ tabKeyLabel = "D3" }) { // tabKeyLabel est passé par App.jsx
     setCurrentStepKey,
     currentStepKey,
   } = useForm8D();
+  const { id } = useParams();
 
   // Clé spécifique pour cette section dans le contexte
   const SECTION_KEY = 'd3_containment'; // IMPORTANT: Doit correspondre à Form8DContext et stepsOrder
@@ -73,8 +75,10 @@ function D3Form({ tabKeyLabel = "D3" }) { // tabKeyLabel est passé par App.jsx
     if (!validatePage()) return;
     setApiStatus(null);
     try {
-      const response = await fetch('/api/nonconformites', {
-        method: 'POST',
+      const method = id ? 'PUT' : 'POST';
+      const url = id ? `/api/nonconformites/${id}` : '/api/nonconformites';
+      const response = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form8DData),
       });

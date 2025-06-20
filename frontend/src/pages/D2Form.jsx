@@ -4,6 +4,7 @@ import { Box, Button, Typography, Grid } from '@mui/material'; // TextField n'es
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import SaveIcon from '@mui/icons-material/Save';
+import { useParams } from 'react-router-dom';
 
 // Importer le sous-composant pour la description
 import Description2DInput from '../components/2D/Description2DInput'; // Assurez-vous que le chemin est correct
@@ -54,6 +55,7 @@ function D2Form({ tabKeyLabel = "D2" }) { // tabKeyLabel est passé par App.jsx
 
   // --- Gestionnaire de Sauvegarde vers l'API ---
   const [apiStatus, setApiStatus] = useState(null); // Pour feedback utilisateur
+  const { id } = useParams();
 
   // Gestionnaire pour Description2DInput
   // newDescriptionObject est l'objet complet {qui, quoi, ou...} renvoyé par Description2DInput
@@ -84,8 +86,10 @@ function D2Form({ tabKeyLabel = "D2" }) { // tabKeyLabel est passé par App.jsx
     if (!validatePage()) return;
     setApiStatus(null);
     try {
-      const response = await fetch('/api/nonconformites', {
-        method: 'POST',
+      const method = id ? 'PUT' : 'POST';
+      const url = id ? `/api/nonconformites/${id}` : '/api/nonconformites';
+      const response = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form8DData),
       });

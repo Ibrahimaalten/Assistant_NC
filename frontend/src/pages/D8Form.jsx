@@ -4,6 +4,7 @@ import { Box, TextField, Button, Typography, Grid, Paper, Divider } from '@mui/m
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import SaveIcon from '@mui/icons-material/Save';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import { useParams } from 'react-router-dom';
 
 // Importer le nouveau composant
 import TeamRecognition from '../components/8D/TeamRecognition'; // Ajuster le chemin si nécessaire
@@ -21,6 +22,7 @@ function D8Form({
     onSaveD8
 }) {
     const { setCurrentStepKey, currentStepKey } = useForm8D();
+    const { id } = useParams();
 
     // --- DONNÉES D'EXEMPLE POUR L'ÉQUIPE (si teamData n'est pas fourni) ---
     const sampleTeamData = [
@@ -99,8 +101,10 @@ function D8Form({
       if (!validateForm()) return;
       setApiStatus(null);
       try {
-          const response = await fetch('/api/nonconformites', {
-              method: 'POST',
+          const method = id ? 'PUT' : 'POST';
+          const url = id ? `/api/nonconformites/${id}` : '/api/nonconformites';
+          const response = await fetch(url, {
+              method,
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(form8DData),
           });

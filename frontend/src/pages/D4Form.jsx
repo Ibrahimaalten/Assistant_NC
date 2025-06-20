@@ -4,6 +4,7 @@ import { Box, Button, Typography, Grid, Tabs, Tab, Paper, TextField, Snackbar, A
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import SaveIcon from '@mui/icons-material/Save';
+import { useParams } from 'react-router-dom';
 
 // Importer les composants de section (vérifie les chemins)
 import IshikawaSection from '../components/4D/IshikawaSection';
@@ -185,13 +186,16 @@ function D4Form({ tabKeyLabel='D4', problemDescription = "Description du problè
 
     // --- Gestionnaire de Sauvegarde vers l'API ---
     const [apiStatus, setApiStatus] = useState(null); // Pour feedback utilisateur
+    const { id } = useParams();
 
     const handleSubmitToAPI = async () => {
         // Ajoutez ici la validation si besoin
         setApiStatus(null);
         try {
-            const response = await fetch('/api/nonconformites', {
-                method: 'POST',
+            const method = id ? 'PUT' : 'POST';
+            const url = id ? `/api/nonconformites/${id}` : '/api/nonconformites';
+            const response = await fetch(url, {
+                method,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(form8DData),
             });
