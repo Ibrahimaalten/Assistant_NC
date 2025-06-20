@@ -1,12 +1,12 @@
-// src/App.jsx
-import React, { useState } from 'react'; // Ajout de useState pour gérer les messages, loading et error
+import React, { useState, useEffect } from 'react';
 import { Tabs, Tab, Box, Container, Typography, AppBar, Paper, Grid } from '@mui/material';
+// MODIFICATION : Importer les composants de React Router
+import { BrowserRouter as Router, Routes, Route, Link as RouterLink, useParams, useLocation } from 'react-router-dom';
 
 // Importer le hook du contexte
-import { useForm8D } from './contexts/Form8DContext'; // Assurez-vous que le chemin est correct
+import { useForm8D, initialForm8DData } from './contexts/Form8DContext'; 
 
 // Importer les composants de formulaire (pages D0 à D8)
-// Assurez-vous que les chemins sont corrects
 import D0Form from './pages/D0Form';
 import D1Form from './pages/D1Form';
 import D2Form from './pages/D2Form';
@@ -17,12 +17,14 @@ import D6Form from './pages/D6Form';
 import D7Form from './pages/D7Form';
 import D8Form from './pages/D8Form';
 
-// Importer le ChatAssistant
+// Importer le ChatAssistant et le Dashboard
 import ChatAssistant from './components/ChatAssistant';
+import Dashboard from './components/Dashboard'; 
+import ListeNonConformites from './components/ListeNonConformites';
 
-// Définitions des onglets AVEC les clés de contexte
-// Ces clés DOIVENT correspondre à celles utilisées dans Form8DContext.js
-// et dans la constante stepsOrder de vos DxForm pour la navigation Précédent/Suivant.
+// Assure-toi que ce chemin est correct
+// import ListeNonConformites from './components/ListeNonConformites'; // Si tu l'as
+
 const tabDefinitions = [
   { key: 'd0_initialisation', label: 'Initialisation', component: D0Form },
   { key: 'd1_team', label: 'D1 - Équipe', component: D1Form },
@@ -35,97 +37,81 @@ const tabDefinitions = [
   { key: 'd8_congratulate', label: 'D8 - Félicitations Équipe', component: D8Form },
 ];
 
-// Le composant TabPanel (peut rester tel quel ou être simplifié si le Paper est géré autrement)
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
   return (
     <div
       role="tabpanel"
       hidden={value !== index}
-      id={`tabpanel-${index}`} // Utiliser l'index pour l'ID est OK ici
-      aria-labelledby={`tab-${tabDefinitions[index].key}`} // Utiliser la clé unique pour aria-labelledby
+      id={`tabpanel-${index}`}
+      aria-labelledby={`tab-${tabDefinitions[index]?.key || index}`} // Robuste au cas où tabDefinitions[index] serait undefined
       {...other}
     >
       {value === index && (
-        // Le Paper externe pour le contenu de l'onglet peut être retiré si la structure globale le gère
-        // ou le garder si vous voulez un style spécifique par onglet.
-        // Pour une structure plus simple, on pourrait mettre le Paper autour du Switch de contenu.
-        <Box sx={{ p: 3 }}> {/* Ajout d'un padding simple */}
-          {children}
-        </Box>
+        <Box sx={{ p: 3 }}>{children}</Box>
       )}
     </div>
   );
 }
 
-function App() {
-  // Utiliser le contexte pour l'onglet actif et la fonction pour le changer
-  const { currentStepKey, setCurrentStepKey } = useForm8D();
-  const [messages, setMessages] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+// MODIFICATION : Création d'un composant pour l'interface 8D et Chat
+const Form8DAndChatInterface = () => {
+  const { currentStepKey, setCurrentStepKey, setForm8DData } = useForm8D();
+  const { id } = useParams();
+  const location = useLocation();
 
-  // Trouver l'index de l'onglet actif basé sur currentStepKey
-  // Si currentStepKey n'est pas encore défini ou ne correspond à aucune clé, on met 0 par défaut.
+  useEffect(() => {
+    if (location.pathname === '/') {
+      // Réinitialiser le contexte si on est sur la création
+      setForm8DData(initialForm8DData);
+    } else if (id) {
+      // Charger la non-conformité depuis l'API et pré-remplir le contexte
+      fetch(`/api/nonconformites/${id}`)
+        .then(res => res.json())
+        .then(data => {
+          // Harmonisation : injecter toutes les sections telles que reçues du backend
+          setForm8DData({
+            ...initialForm8DData, // Garantit toutes les clés même si certaines sont absentes
+            ...data,              // Ecrase avec les valeurs récupérées du backend
+            currentStepKey: 'd0_initialisation',
+          });
+        });
+    }
+  }, [id, setForm8DData, location.pathname]);
+
   const activeTabIndex = Math.max(0, tabDefinitions.findIndex(tab => tab.key === currentStepKey));
 
   const handleTabChange = (event, newTabIndex) => {
-    // Mettre à jour le contexte avec la CLÉ du nouvel onglet sélectionné
     if (tabDefinitions[newTabIndex]) {
       setCurrentStepKey(tabDefinitions[newTabIndex].key);
     }
   };
 
-  const handleSend = async (text) => {
-    setLoading(true);
-    setError('');
-    try {
-      // Appelle ton backend ici (fetch/axios)
-      // const response = await ...
-      // setMessages([...messages, { role: 'user', content: text }, { role: 'assistant', content: response.answer, sources: response.sources }]);
-    } catch (e) {
-      setError("Erreur lors de la communication avec l'assistant.");
-    }
-    setLoading(false);
-  };
-
-  // La fonction handleNavigate n'est plus passée aux enfants.
-  // Les composants DxForm géreront leur propre navigation "Précédent"/"Suivant"
-  // en utilisant setCurrentStepKey du contexte.
-
   return (
-    // Container principal pour la mise en page globale avec Grid
     <Container
-      maxWidth={false} // Utiliser toute la largeur disponible
+      maxWidth={false}
       sx={{
         display: 'flex',
-        height: '100vh', // Pleine hauteur de la fenêtre
-        p: 0, // Pas de padding sur le container externe
-        m: 0, // Pas de marge
-        overflow: 'hidden' // Empêcher le défilement du container principal
+        height: '100%', // Prendra la hauteur du parent (qui sera le Box dans App)
+        p: 0, 
+        m: 0, 
+        overflow: 'hidden'
       }}
     >
       <Grid container sx={{ height: '100%' }}>
-        {/* Colonne pour le contenu 8D (AppBar, Onglets, Contenu de l'onglet) */}
-        <Grid
-          item
-          xs={12} // Pleine largeur sur mobile
-          md={8}  // 2/3 de la largeur sur les écrans moyens et plus
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            height: '100%',
-            // borderRight: { md: '1px solid #ccc' } // Bordure entre les sections sur md+
-          }}
-        >
-          <AppBar position="sticky" color="primary" sx={{ borderRadius: 0 /* Pas de coins arrondis si pleine largeur */ }}>
+        <Grid item xs={12} md={8} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+          <AppBar position="sticky" color="primary" sx={{ borderRadius: 0 }}>
             <Typography variant="h5" component="h1" sx={{ p: 2, textAlign: 'center' }}>
               Gestion des Non-Conformités - Méthode 8D
             </Typography>
+            <Box sx={{ position: 'absolute', top: 16, right: 24 }}>
+              {/* MODIFICATION : Utiliser RouterLink */}
+              <RouterLink to="/dashboard" style={{ color: '#fff', textDecoration: 'none', fontWeight: 'bold', background: '#008BBD', padding: '8px 16px', borderRadius: '4px' }}>
+                Accéder au Dashboard
+              </RouterLink>
+            </Box>
           </AppBar>
-
-          {/* Barre d'onglets */}
-          <Paper elevation={2} sx={{ position: 'sticky', top: 0, zIndex: 10 /* Assurer que les onglets sont au-dessus */ }}> {/* Paper pour les onglets */}
+          <Paper elevation={2} sx={{ position: 'sticky', top: 0, zIndex: 10 }}>
             <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
               <Tabs
                 value={activeTabIndex}
@@ -134,55 +120,71 @@ function App() {
                 scrollButtons="auto"
                 aria-label="Onglets du processus 8D"
               >
-                {tabDefinitions.map((tab, index) => (
+                {tabDefinitions.map((tab) => ( // index non nécessaire si key est unique
                   <Tab
                     label={tab.label}
-                    id={`tab-${tab.key}`} // Utiliser la clé unique pour l'ID
+                    id={`tab-${tab.key}`}
                     aria-controls={`tabpanel-${tab.key}`}
-                    key={tab.key} // Utiliser la clé unique pour la prop key de React
+                    key={tab.key}
                   />
                 ))}
               </Tabs>
             </Box>
           </Paper>
-
-          {/* Contenu de l'onglet actif */}
-          <Box sx={{ flexGrow: 1, overflowY: 'auto', p: 0 /* Le padding sera dans TabPanel ou DxForm */ }}>
-            {/* Le Paper autour de chaque contenu d'onglet est maintenant dans TabPanel */}
-            {tabDefinitions.map((tab, index) => {
+          <Box sx={{ flexGrow: 1, overflowY: 'auto', p: 0 }}>
+            {tabDefinitions.map((tab, index) => { // index est nécessaire pour TabPanel
               const FormComponent = tab.component;
-              // tabKeyLabel est toujours utile pour l'affichage dans le DxForm
-              const tabKeyDisplayLabel = tab.label.split(' - ')[0] || tab.key; // Ex: "D1" ou "Initialisation"
-
+              const tabKeyDisplayLabel = tab.label.split(' - ')[0] || tab.key;
               return (
                 <TabPanel value={activeTabIndex} index={index} key={tab.key}>
-                  <FormComponent
-                    tabKeyLabel={tabKeyDisplayLabel}
-                  />
+                  <FormComponent tabKeyLabel={tabKeyDisplayLabel} />
                 </TabPanel>
               );
             })}
           </Box>
         </Grid>
-
-        {/* Colonne pour le ChatAssistant */}
-        <Grid
-          item
-          xs={12} // Prendra toute la largeur sous la section 8D sur mobile
-          md={4}  // 1/3 de la largeur sur les écrans moyens et plus
-          sx={{
-            height: { xs: '50vh', md: '100%' }, // Hauteur différente sur mobile vs desktop
-            borderLeft: { md: '1px solid #ccc' }, // Bordure visible uniquement sur desktop
-            display: 'flex',
-            flexDirection: 'column',
-            backgroundColor: '#f8f9fa', // Une couleur de fond légèrement différente
-            overflow: 'hidden' // Pour s'assurer que le chat ne déborde pas
-          }}
-        >
-          <ChatAssistant onSend={handleSend} messages={messages} loading={loading} error={error} /> {/* ChatAssistant intégré avec gestion des messages, loading et erreurs */}
+        <Grid item xs={12} md={4} sx={{ height: { xs: '50vh', md: '100%' }, borderLeft: { md: '1px solid #ccc' }, display: 'flex', flexDirection: 'column', backgroundColor: '#f8f9fa', overflow: 'hidden' }}>
+          {/* MODIFICATION: Supposons que ChatAssistant gère ses propres états messages/loading/error */}
+          <ChatAssistant />
         </Grid>
       </Grid>
     </Container>
+  );
+};
+
+
+function App() {
+  // Les états `messages`, `loading`, `error` qui étaient ici pour le ChatAssistant
+  // ont été retirés. ChatAssistant.jsx doit maintenant gérer ces états lui-même,
+  // ou si tu veux absolument les garder ici, tu devras les passer en props à <Form8DAndChatInterface />
+  // puis à <ChatAssistant /> à l'intérieur de ce composant.
+  // Pour la simplicité de cette modification, j'assume que ChatAssistant est autonome pour son état interne.
+  // Le contexte `Form8DContext` est toujours utilisé par `Form8DAndChatInterface` via le hook `useForm8D`.
+
+  return (
+    // MODIFICATION : Envelopper avec Router
+      <Box sx={{height: '100vh', display: 'flex', flexDirection: 'column'}}>
+        {/* MODIFICATION : Définition des Routes */}
+        <Routes>
+          {/* La route par défaut affiche l'interface 8D et Chat */}
+          <Route path="/" element={<Form8DAndChatInterface />} />
+          <Route path="/liste-nonconformites" element={<ListeNonConformites />} /> 
+
+          {/* La route pour le Dashboard */}
+          <Route path="/dashboard" element={<Dashboard />} />
+
+          {/* Route pour la résolution d'une NC existante */}
+          <Route path="/resolution/:id" element={<Form8DAndChatInterface />} />
+          
+          {/* Optionnel: une route pour les URL non trouvées */}
+          <Route path="*" element={
+            <Container sx={{pt: 5, textAlign: 'center'}}>
+              <Typography variant="h4">404 - Page Non Trouvée</Typography>
+              <RouterLink to="/">Retour à l'accueil</RouterLink>
+            </Container>
+          }/>
+        </Routes>
+      </Box>
   );
 }
 

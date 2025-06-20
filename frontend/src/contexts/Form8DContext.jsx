@@ -1,10 +1,7 @@
 // src/contexts/Form8DContext.js
 import React, { createContext, useState, useContext, useCallback } from 'react';
 
-const Form8DContext = createContext();
-export const useForm8D = () => useContext(Form8DContext);
-
-const initialForm8DData = {
+export const initialForm8DData = {
   d0_initialisation :{referenceNC: '',
   dateDetection: new Date().toISOString().slice(0, 10),
   dateCreation: new Date().toISOString().slice(0, 10), // Date du jour par défaut
@@ -52,6 +49,9 @@ const initialForm8DData = {
   },
   currentStepKey: 'd0_initialisation', // Clé pour identifier la section/page active
 };
+
+const Form8DContext = createContext();
+export const useForm8D = () => useContext(Form8DContext);
 
 export const Form8DProvider = ({ children }) => {
   const [form8DData, setForm8DData] = useState(initialForm8DData);
@@ -101,6 +101,7 @@ export const Form8DProvider = ({ children }) => {
     getCurrentStepData,
     currentStepKey: form8DData.currentStepKey,
     setCurrentStepKey,
+    setForm8DData, // Ajout pour accès direct dans App.jsx
   };
 
   return <Form8DContext.Provider value={value}>{children}</Form8DContext.Provider>;

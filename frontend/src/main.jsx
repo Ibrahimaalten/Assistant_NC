@@ -7,6 +7,8 @@ import './index.css'; // Styles globaux de base
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { Form8DProvider } from './contexts/Form8DContext.jsx';
+import { BrowserRouter } from 'react-router-dom';
+
 // Créer un thème clair par défaut
 const brandColors = {
   black: '#000000',
@@ -142,7 +144,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <Form8DProvider>
     <ThemeProvider theme={lightTheme}>
       <CssBaseline /> {/* Normalise les styles et applique la couleur de fond du thème */}
-      <App />
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
     </ThemeProvider>
     </Form8DProvider>
   </React.StrictMode>,

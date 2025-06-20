@@ -4,6 +4,7 @@ import { Box, TextField, Button, Typography, Grid, Paper, Divider } from '@mui/m
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import SaveIcon from '@mui/icons-material/Save';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import { useParams } from 'react-router-dom';
 
 // Importer le nouveau composant
 import TeamRecognition from '../components/8D/TeamRecognition'; // Ajuster le chemin si nécessaire
@@ -21,6 +22,7 @@ function D8Form({
     onSaveD8
 }) {
     const { setCurrentStepKey, currentStepKey } = useForm8D();
+    const { id } = useParams();
 
     // --- DONNÉES D'EXEMPLE POUR L'ÉQUIPE (si teamData n'est pas fourni) ---
     const sampleTeamData = [
@@ -92,28 +94,33 @@ function D8Form({
     return Object.keys(tempErrors).length === 0;
   };
 
-  // --- Sauvegarde Finale et Clôture ---
-  const handleSaveAndClose = () => {
-     if (validateForm()) {
-        const saveData = {
-            ...formData, // resumeResultats, leconsApprises, dateCloture
-            teamRecognitionMessage: recognitionMessageForSave, // Sauvegarde le message "envoyé"
-            teamAcknowledged: currentTeam.map(m => m.name) // Liste des noms de l'équipe remerciée
-        };
-        console.log('Données D8 Finales à Sauvegarder (Clôture):', saveData);
-        if (onSaveD8) {
-            onSaveD8(saveData); // Appelle le callback parent pour la sauvegarde finale
-            alert(`Rapport ${tabKeyLabel} (simulé) sauvegardé et clôturé !`);
-            // Ici, on pourrait aussi déclencher une redirection ou un état "terminé"
-        } else {
-           console.error(`Callback onSaveD8 non fourni à D8Form.`);
-            alert(`Erreur: La fonction de sauvegarde finale pour ${tabKeyLabel} n'est pas configurée.`);
-        }
-    } else {
-       console.log("Validation D8 échouée", errors);
-       alert("Veuillez corriger les erreurs avant de clôturer.");
-    }
+  // --- Gestionnaire de Sauvegarde vers l'API ---
+  const [apiStatus, setApiStatus] = useState(null); // Pour feedback utilisateur
+
+  const handleSubmitToAPI = async () => {
+      if (!validateForm()) return;
+      setApiStatus(null);
+      try {
+          const method = id ? 'PUT' : 'POST';
+          const url = id ? `/api/nonconformites/${id}` : '/api/nonconformites';
+          const response = await fetch(url, {
+              method,
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(form8DData),
+          });
+          if (response.ok) {
+              setApiStatus('success');
+          } else {
+              setApiStatus('error');
+          }
+      } catch (error) {
+          setApiStatus('error');
+      }
   };
+
+    const handleSaveAndClose = () => {
+        handleSubmitToAPI();
+    };
 
     const stepsOrder = [
       'd0_initialisation',
@@ -176,6 +183,12 @@ function D8Form({
 
         {/* --- Zone des Boutons --- */}
         <Grid item xs={12}>
+           {apiStatus === 'success' && (
+              <Typography color="success.main" sx={{ mb: 2 }}>Sauvegarde réussie !</Typography>
+           )}
+           {apiStatus === 'error' && (
+              <Typography color="error.main" sx={{ mb: 2 }}>Erreur lors de la sauvegarde. Veuillez réessayer.</Typography>
+           )}
            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 3 }}>
               <Button variant="outlined" startIcon={<NavigateBeforeIcon />} onClick={handlePrevious} disabled={currentIndex === 0} >
                 Précédent
