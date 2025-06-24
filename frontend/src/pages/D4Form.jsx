@@ -10,6 +10,7 @@ import { useParams } from 'react-router-dom';
 import IshikawaSection from '../components/4D/IshikawaSection';
 import FiveWhysSection from '../components/4D/FiveWhysSection';
 import { useForm8D } from '../contexts/Form8DContext';
+import MainButton from '../components/MainButton';
 
 function D4Form({ tabKeyLabel='D4', problemDescription = "Description du problème non fournie." }) {
     const { form8DData, updateFormField,
@@ -290,19 +291,19 @@ function D4Form({ tabKeyLabel='D4', problemDescription = "Description du problè
             {apiStatus === 'error' && (
                 <Typography color="error.main" sx={{ mb: 2 }}>Erreur lors de la sauvegarde. Veuillez réessayer.</Typography>
             )}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 3 }}>
-                <Button variant="outlined" startIcon={<NavigateBeforeIcon />} onClick={handlePrevious} disabled={currentIndex === 0}>
-                    Précédent
-                </Button>
-                <Box>
-                    <Button variant="contained" color="primary" startIcon={<SaveIcon />} onClick={handleSave} sx={{ mr: 1 }}>
-                        Sauvegarder {tabKeyLabel}
-                    </Button>
-                    <Button variant="contained" endIcon={<NavigateNextIcon />} onClick={handleNext} disabled={currentIndex === stepsOrder.length - 1}>
-                        Suivant
-                    </Button>
-                </Box>
-            </Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 4 }}>
+        <MainButton color="primary" onClick={handlePrevious} disabled={currentIndex === 0} startIcon={<NavigateBeforeIcon />} sx={{ minWidth: 120 }}>
+          Précédent
+        </MainButton>
+        <Box>
+          <MainButton color="primary" onClick={handleSave} startIcon={<SaveIcon />} sx={{ mr: 1, minWidth: 150 }}>
+            Sauvegarder {tabKeyLabel || 'D4'}
+          </MainButton>
+          <MainButton color="primary" onClick={handleNext} disabled={currentIndex === stepsOrder.length - 1} endIcon={<NavigateNextIcon />} sx={{ minWidth: 120 }}>
+            Suivant
+          </MainButton>
+        </Box>
+      </Box>
         </Grid>
             {/* Préparation pour ChatAssistant (décommenter pour intégrer) */}
             {/* <Box sx={{ mt: 4 }}><ChatAssistant /></Box> */}

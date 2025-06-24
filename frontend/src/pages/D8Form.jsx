@@ -4,11 +4,13 @@ import { Box, TextField, Button, Typography, Grid, Paper, Divider } from '@mui/m
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import SaveIcon from '@mui/icons-material/Save';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import { useParams } from 'react-router-dom';
 
 // Importer le nouveau composant
 import TeamRecognition from '../components/8D/TeamRecognition'; // Ajuster le chemin si nécessaire
 import { useForm8D } from "../contexts/Form8DContext";
+import MainButton from '../components/MainButton';
 
 // --- Props Attendues ---
 // activeTabIndex, totalTabs, onNavigate, tabKeyLabel: Navigation
@@ -142,6 +144,13 @@ function D8Form({
       }
     };
 
+    const handleNext = () => {
+      if (currentIndex < stepsOrder.length - 1) {
+        setCurrentStepKey(stepsOrder[currentIndex + 1]);
+        window.scrollTo(0, 0);
+      }
+    };
+
   // --- Rendu ---
   return (
     <Box component="div" sx={{ p: 2 }}> {/* Pas de <form> */}
@@ -172,7 +181,7 @@ function D8Form({
 
         {/* Section Clôture */}
          <Grid item xs={12}>
-             <Paper elevation={1} variant="outlined" sx={{ p: 2, mt: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+             <Paper elevation={0} variant="outlined" sx={{ p: 2, mt: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                  <TextField
                     id="dateCloture" name="dateCloture" label="Date de clôture du 8D" type="date"
                     variant="outlined" size="small" InputLabelProps={{ shrink: true }}
@@ -189,13 +198,16 @@ function D8Form({
            {apiStatus === 'error' && (
               <Typography color="error.main" sx={{ mb: 2 }}>Erreur lors de la sauvegarde. Veuillez réessayer.</Typography>
            )}
-           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 3 }}>
-              <Button variant="outlined" startIcon={<NavigateBeforeIcon />} onClick={handlePrevious} disabled={currentIndex === 0} >
-                Précédent
-              </Button>
-              <Button variant="contained" color="success" startIcon={<CheckCircleOutlineIcon />} onClick={handleSaveAndClose} >
-                Sauvegarder et Clôturer {tabKeyLabel}
-              </Button>
+           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 4, gap: 2 }}>
+                <MainButton color="primary" onClick={handlePrevious} startIcon={<NavigateBeforeIcon />} sx={{ minWidth: 120 }}>
+                  Précédent
+                </MainButton>
+                <MainButton color="primary" onClick={handleSaveAndClose} startIcon={<SaveIcon />} sx={{ minWidth: 150 }}>
+                  Sauvegarder {tabKeyLabel || 'D8'}
+                </MainButton>
+                <MainButton color="success" onClick={handleSaveAndClose} startIcon={<CheckCircleOutlineIcon />} sx={{ minWidth: 150 }}>
+                  Clôturer
+                </MainButton>
            </Box>
         </Grid>
       </Grid>

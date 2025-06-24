@@ -86,6 +86,7 @@ class QueryContextPayload(BaseModel):
     form_data: Dict[str, Any] = Field(default_factory=dict)
     current_section_data: Dict[str, Any] = Field(default_factory=dict)
     current_section_name: Optional[str] = None
+    mode: Optional[str] = 'CHAT'  # Ajout du mode
 
 @app.post("/query_with_context")
 async def process_contextual_query(payload: QueryContextPayload):
@@ -93,6 +94,41 @@ async def process_contextual_query(payload: QueryContextPayload):
     form_data_8d = payload.form_data
     current_section_data_8d = payload.current_section_data
     current_section_name_8d = payload.current_section_name
+    mode = payload.mode or 'CHAT'
+    if mode == 'REQ':
+        # Appel direct à la logique de retrieval, sans LLM
+        from backend.query import get_vectorstore, get_hybrid_retriever
+        vectorstore = get_vectorstore()
+        all_docs = vectorstore.get(include=['documents'])['documents']
+        bm25_docs = []
+        from langchain_core.documents import Document
+        for doc in all_docs:
+            if isinstance(doc, Document):
+                bm25_docs.append(doc)
+            elif isinstance(doc, dict) and 'page_content' in doc and 'metadata' in doc:
+                bm25_docs.append(Document(page_content=doc['page_content'], metadata=doc['metadata']))
+            elif isinstance(doc, str):
+                bm25_docs.append(Document(page_content=doc, metadata={}))
+        hybrid_retriever = get_hybrid_retriever(vectorstore, bm25_docs, emb_weight=0.6, bm25_weight=0.4, k=3)
+        # Utilise la même logique d'enrichissement de requête que le RAG
+        enriched_query = query_text
+        if current_section_data_8d:
+            context_fields_text = ' '.join([str(v) for k, v in current_section_data_8d.items() if v and k != 'id'])
+            if context_fields_text:
+                enriched_query += f" (contexte de {current_section_name_8d}: {context_fields_text})"
+        docs = hybrid_retriever(enriched_query)
+        # Formate les sources comme dans le RAG
+        sources = []
+        for doc in docs:
+            source = {
+                "content": doc.page_content[:200] + "...",
+                "nc_id": doc.metadata.get("id_non_conformite", "Inconnu"),
+                "source": doc.metadata.get("nom_fichier_source", "Unknown")
+            }
+            sources.append(source)
+        def simple_stream():
+            yield json.dumps({"sources": sources, "done": True}, ensure_ascii=False) + "\n"
+        return StreamingResponse(simple_stream(), media_type="application/jsonlines")
     async def stream_response():
         async for chunk in query_documents_with_context(
             query_text=query_text,
@@ -101,7 +137,13 @@ async def process_contextual_query(payload: QueryContextPayload):
             current_section_name=current_section_name_8d,
             stream=True
         ):
-            yield json.dumps(chunk, ensure_ascii=False) + "\n"
+            # Si mode REQ, ne renvoyer que les sources et done (pas de réponse LLM)
+            if mode == 'REQ' and chunk.get('done'):
+                yield json.dumps({"sources": chunk.get('sources', []), "done": True}, ensure_ascii=False) + "\n"
+            elif mode == 'REQ':
+                continue  # Ignore les autres chunks
+            else:
+                yield json.dumps(chunk, ensure_ascii=False) + "\n"
     return StreamingResponse(stream_response(), media_type="application/jsonlines")
 
 if __name__ == "__main__":

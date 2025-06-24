@@ -1,7 +1,8 @@
 // src/components/ChatAssistant.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { useForm8D } from '../contexts/Form8DContext';
-import { Box, Paper, Avatar, Typography, TextField, IconButton, CircularProgress, Snackbar } from '@mui/material';
+import { COLORS } from '../colors';
+import { Box, Paper, Avatar, Typography, TextField, IconButton, CircularProgress, Snackbar, MenuItem, Select, FormControl, InputLabel } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import StopIcon from '@mui/icons-material/Stop';
 import { v4 as uuidv4 } from 'uuid'; // Pour des IDs uniques
@@ -13,6 +14,7 @@ function ChatAssistant() {
   const [userInput, setUserInput] = useState('');
   const [isOverallLoading, setIsOverallLoading] = useState(false); // Pour le spinner global de l'input
   const [error, setError] = useState(null);
+  const [chatMode, setChatMode] = useState('CHAT'); // 'CHAT' ou 'REQ'
   const messagesEndRef = useRef(null);
   const chatMessagesRef = useRef(null);
   const streamReaderRef = useRef(null); // Pour garder le reader courant
@@ -30,9 +32,10 @@ function ChatAssistant() {
   const handleInputChange = (e) => setUserInput(e.target.value);
 
   const handleSendMessage = async (event) => {
-    if (event) event.preventDefault(); // Permet d'appeler sans événement (ex: action automatique)
-    const text = userInput.trim();
-    if (text === '' && event) return; // Si appelé par un événement et que l'input est vide
+    if (event) event.preventDefault();
+    let text = userInput.trim();
+    if (chatMode === 'REQ') text = '';
+    if (text === '' && event && chatMode !== 'REQ') return; // Si appelé par un événement et que l'input est vide
 
     const userMsg = { id: uuidv4(), text, sender: 'user', isLoading: false };
     setMessages(prev => [...prev, userMsg]);
@@ -50,7 +53,8 @@ function ChatAssistant() {
         query: text,
         form_data: all8DData,
         current_section_data: currentSectionData,
-        current_section_name: currentStepKey
+        current_section_name: currentStepKey,
+        mode: chatMode // <-- Ajout du mode
       };
 
       // Ajoute une bulle de bot en attente
@@ -203,10 +207,31 @@ function ChatAssistant() {
 
   return (
     <Paper elevation={3} sx={{
-      p: 2, bgcolor: 'background.paper', borderRadius: 3, height: '100%',
-      display: 'flex', flexDirection: 'column', boxShadow: 3
+      p: { xs: 1, sm: 2 },
+      bgcolor: COLORS.background,
+      borderRadius: 4,
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+      boxShadow: '0 4px 24px 0 rgba(35,57,93,0.10)',
+      border: `1.5px solid ${COLORS.primaryDark}20`
     }}>
-      <Box sx={{ flex: 1, overflowY: 'auto', mb: 2, p:1 }} ref={chatMessagesRef}>
+      {/* Menu déroulant pour choisir le mode */}
+      <FormControl size="small" sx={{ mb: 1, minWidth: 120, bgcolor: COLORS.white, borderRadius: 2, boxShadow: '0 1px 4px #e3eafc' }}>
+        <InputLabel id="chat-mode-label" sx={{ color: COLORS.primaryDark, fontWeight: 600 }}>Mode</InputLabel>
+        <Select
+          labelId="chat-mode-label"
+          id="chat-mode-select"
+          value={chatMode}
+          label="Mode"
+          onChange={e => setChatMode(e.target.value)}
+          sx={{ color: COLORS.primaryDark, bgcolor: COLORS.white, '& .MuiSelect-icon': { color: COLORS.primaryDark } }}
+        >
+          <MenuItem value="CHAT" sx={{ color: COLORS.primaryDark }}>Chat</MenuItem>
+          <MenuItem value="REQ" sx={{ color: COLORS.accentGreen }}>Requête (sources)</MenuItem>
+        </Select>
+      </FormControl>
+      <Box sx={{ flex: 1, overflowY: 'auto', mb: 2, p:1, background: '#f7fafd', borderRadius: 2 }} ref={chatMessagesRef}>
         {messages.map((msg) => (
           <Box 
             key={msg.id} 
@@ -219,29 +244,33 @@ function ChatAssistant() {
           >
             <Avatar 
               sx={{ 
-                bgcolor: msg.sender === 'user' ? 'primary.main' : 
-                         (msg.sender === 'error' ? 'error.main' : 
-                         (msg.sender === 'system' ? 'info.main' : 'secondary.main')), 
-                color: 'white',
+                bgcolor: msg.sender === 'user' ? COLORS.primaryDark : 
+                         (msg.sender === 'error' ? COLORS.error : 
+                         (msg.sender === 'system' ? COLORS.accentGreen : COLORS.accentBlue)), 
+                color: COLORS.white,
                 ml: msg.sender === 'user' ? 1 : 0, 
                 mr: msg.sender === 'user' ? 0 : 1,
-                width: 32, height: 32, fontSize: '0.8rem'
+                width: 32, height: 32, fontSize: '0.8rem',
+                boxShadow: '0 1px 4px #e3eafc'
               }}
             >
               {msg.sender === 'user' ? 'U' : (msg.sender === 'error' ? 'E' : (msg.sender === 'system' ? 'S' : 'A'))}
             </Avatar>
             <Box 
               sx={{
-                bgcolor: msg.sender === 'user' ? 'primary.light' : 
-                         (msg.sender === 'error' ? 'error.light' : 
-                         (msg.sender === 'system' ? 'info.light' : 'grey.100')),
-                color: msg.sender === 'user' ? 'primary.contrastText' : 'text.primary',
+                bgcolor: msg.sender === 'user' ? COLORS.primaryGradient : 
+                         (msg.sender === 'error' ? '#ffeaea' : 
+                         (msg.sender === 'system' ? '#e6f7ef' : '#eaf1fb')),
+                color: msg.sender === 'user' ? COLORS.white : (msg.sender === 'error' ? COLORS.error : (msg.sender === 'system' ? '#218c5a' : COLORS.primaryDark)),
                 p: 1.5, 
-                borderRadius: msg.sender === 'user' ? '15px 15px 0 15px' : '15px 15px 15px 0',
+                borderRadius: msg.sender === 'user' ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
                 maxWidth: '75%', 
-                boxShadow: 1, 
+                boxShadow: '0 2px 8px #e3eafc',
                 position: 'relative',
-                wordBreak: 'break-word'
+                wordBreak: 'break-word',
+                border: msg.sender === 'user' ? 'none' : '1px solid #e3eafc',
+                fontSize: '1.08rem',
+                fontWeight: 500
               }}
             >
               {msg.isLoading && msg.sender === 'bot' && (
@@ -253,14 +282,14 @@ function ChatAssistant() {
                     left: '50%', 
                     marginTop: '-8px', 
                     marginLeft: '-8px',
-                    color: msg.sender === 'user' ? 'primary.contrastText' : 'text.secondary'
+                    color: COLORS.primaryDark
                   }} 
                 />
               )}
               {msg.htmlText ? 
                 <div dangerouslySetInnerHTML={{ __html: msg.htmlText }} /> 
                 : 
-                <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>{msg.text}</Typography>
+                <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', color: 'inherit' }}>{msg.text}</Typography>
               }
               {msg.isSuggestion && msg.suggestionDetails && (
                 <button
@@ -271,11 +300,11 @@ function ChatAssistant() {
                     padding: '6px 12px', 
                     fontSize: '0.875rem', 
                     cursor: 'pointer', 
-                    backgroundColor: '#4CAF50',
-                    color: 'white', 
+                    backgroundColor: COLORS.accentGreen,
+                    color: COLORS.white, 
                     border: 'none', 
                     borderRadius: '4px',
-                    boxShadow: '0 2px 2px 0 rgba(0,0,0,0.14), 0 3px 1px -2px rgba(0,0,0,0.12), 0 1px 5px 0 rgba(0,0,0,0.20)'
+                    boxShadow: '0 2px 2px 0 rgba(0,0,0,0.10)'
                   }}
                 >
                   Appliquer la Suggestion
@@ -286,22 +315,39 @@ function ChatAssistant() {
         ))}
         <div ref={messagesEndRef} />
       </Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, pt:1, borderTop: '1px solid', borderColor: 'divider' }}>
-        <TextField
-          fullWidth
-          placeholder="Posez votre question..."
-          value={userInput}
-          onChange={handleInputChange}
-          onKeyDown={e => {if (e.key === 'Enter' && !e.shiftKey) { handleSendMessage(e); e.preventDefault();}}}
-          disabled={isOverallLoading}
-          size="small"
-          variant="outlined"
-        />
-        <IconButton color="primary" onClick={handleSendMessage} disabled={isOverallLoading || !userInput.trim()}>
-          {isOverallLoading ? <CircularProgress size={24} /> : <SendIcon />}
-        </IconButton>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, pt:1, borderTop: '1px solid', borderColor: '#e3eafc', background: COLORS.white, borderRadius: 2, boxShadow: '0 1px 4px #e3eafc' }}>
+        {chatMode === 'CHAT' ? (
+          <>
+            <TextField
+              fullWidth
+              placeholder="Posez votre question..."
+              value={userInput}
+              onChange={handleInputChange}
+              onKeyDown={e => {if (e.key === 'Enter' && !e.shiftKey) { handleSendMessage(e); e.preventDefault();}}}
+              disabled={isOverallLoading}
+              size="small"
+              variant="outlined"
+              sx={{ bgcolor: COLORS.white, borderRadius: 2 }}
+            />
+            <IconButton sx={{ bgcolor: COLORS.primaryDark, color: COLORS.white, '&:hover': { bgcolor: COLORS.accentBlue }, boxShadow: '0 1px 4px #e3eafc' }} onClick={handleSendMessage} disabled={isOverallLoading || !userInput.trim()}>
+              {isOverallLoading ? <CircularProgress size={24} /> : <SendIcon />}
+            </IconButton>
+          </>
+        ) : (
+          <>
+            <button
+              style={{
+                background: COLORS.accentBlue, color: COLORS.white, border: 'none', borderRadius: 8, padding: '0.7rem 1.5rem', fontWeight: 600, fontSize: '1rem', cursor: 'pointer', boxShadow: '0 2px 8px #e3eafc'
+              }}
+              disabled={isOverallLoading}
+              onClick={() => handleSendMessage({ preventDefault: () => {} })}
+            >
+              {isOverallLoading ? 'Recherche...' : 'Rechercher des NC similaires'}
+            </button>
+          </>
+        )}
         {isOverallLoading && (
-          <IconButton color="error" onClick={handleStopGeneration} title="Arrêter la génération" sx={{ bgcolor: '#fff', border: '1px solid #d32f2f', ml: 1 }}>
+          <IconButton sx={{ bgcolor: COLORS.white, color: COLORS.error, border: '1px solid', borderColor: COLORS.error, ml: 1, boxShadow: '0 1px 4px #e3eafc' }} onClick={handleStopGeneration} title="Arrêter la génération">
             <StopIcon />
           </IconButton>
         )}

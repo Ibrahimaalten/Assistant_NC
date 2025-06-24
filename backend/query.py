@@ -89,7 +89,19 @@ async def query_documents_with_context(query_text: str, form_data: dict, current
     vectorstore = get_vectorstore()
     # Charger tous les documents pour BM25 (depuis la base vectorielle)
     all_docs = vectorstore.get(include=['documents'])['documents']
-    bm25_docs = [Document(page_content=doc['page_content'], metadata=doc['metadata']) for doc in all_docs]
+    bm25_docs = []
+    for doc in all_docs:
+        # Si doc est déjà un Document
+        if isinstance(doc, Document):
+            bm25_docs.append(doc)
+        # Si doc est un dict avec les bonnes clés
+        elif isinstance(doc, dict) and 'page_content' in doc and 'metadata' in doc:
+            bm25_docs.append(Document(page_content=doc['page_content'], metadata=doc['metadata']))
+        # Si doc est une string (fallback)
+        elif isinstance(doc, str):
+            bm25_docs.append(Document(page_content=doc, metadata={}))
+        else:
+            print(f"[WARN] Format inattendu pour doc dans all_docs: {doc}")
     hybrid_retriever = get_hybrid_retriever(vectorstore, bm25_docs, emb_weight=0.6, bm25_weight=0.4, k=3)
     retrieved_docs = []
     try:

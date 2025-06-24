@@ -22,6 +22,8 @@ import ChatAssistant from './components/ChatAssistant';
 import Dashboard from './components/Dashboard'; 
 import ListeNonConformites from './components/ListeNonConformites';
 
+import { COLORS } from './colors';
+
 // Assure-toi que ce chemin est correct
 // import ListeNonConformites from './components/ListeNonConformites'; // Si tu l'as
 
@@ -100,13 +102,12 @@ const Form8DAndChatInterface = () => {
     >
       <Grid container sx={{ height: '100%' }}>
         <Grid item xs={12} md={8} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-          <AppBar position="sticky" color="primary" sx={{ borderRadius: 0 }}>
-            <Typography variant="h5" component="h1" sx={{ p: 2, textAlign: 'center' }}>
-              Gestion des Non-Conformités - Méthode 8D
-            </Typography>
-            <Box sx={{ position: 'absolute', top: 16, right: 24 }}>
-              {/* MODIFICATION : Utiliser RouterLink */}
-              <RouterLink to="/dashboard" style={{ color: '#fff', textDecoration: 'none', fontWeight: 'bold', background: '#008BBD', padding: '8px 16px', borderRadius: '4px' }}>
+          <AppBar position="sticky" color="primary" sx={{ borderRadius: 0, background: COLORS.primaryDark, boxShadow: '0 2px 12px #e3eafc', minHeight: 70 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 3, py: 1 }}>
+              <Typography variant="h5" component="h1" sx={{ color: COLORS.white, fontWeight: 700, letterSpacing: 1, m: 0 }}>
+                Gestion des Non-Conformités - Méthode 8D
+              </Typography>
+              <RouterLink to="/dashboard" style={{ color: COLORS.white, textDecoration: 'none', fontWeight: 'bold', background: COLORS.accentBlue, padding: '10px 22px', borderRadius: '6px', boxShadow: '0 2px 8px #e3eafc', fontSize: '1.1rem', marginLeft: 24 }}>
                 Accéder au Dashboard
               </RouterLink>
             </Box>

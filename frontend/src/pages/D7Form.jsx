@@ -10,6 +10,7 @@ import { useParams } from 'react-router-dom';
 // Importer les sous-composants 7D
 import RootCausePreventSelector from '../components/7D/RootCausePreventSelector';
 import PreventiveActionPlanner from '../components/7D/PreventiveActionPlanner';
+import MainButton from '../components/MainButton';
 
 // --- Props Attendues ---
 // activeTabIndex, totalTabs, onNavigate, tabKeyLabel: Navigation
@@ -205,9 +206,9 @@ function D7Form({
           ) : (
               selectedPreventiveCauses.map(cause => (
                   <PreventiveActionPlanner
-                      key={cause} // Important pour React
+                      key={cause}
                       rootCauseText={cause}
-                      actions={preventiveActions[cause] || []} // Passe les actions pour cette cause
+                      actions={preventiveActions[cause] || []}
                       onActionAdd={handleAddPreventiveAction}
                       onActionDelete={handleDeletePreventiveAction}
                   />
@@ -241,17 +242,17 @@ function D7Form({
 
       {/* --- Zone des Boutons --- */}
       <Grid item xs={12}>
-         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 3 }}>
-            <Button variant="outlined" startIcon={<NavigateBeforeIcon />} onClick={handlePrevious} disabled={currentIndex === 0}>
+         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 4 }}>
+            <MainButton color="primary" onClick={handlePrevious} disabled={currentIndex === 0} startIcon={<NavigateBeforeIcon />} sx={{ minWidth: 120 }}>
               Précédent
-            </Button>
-             <Box>
-                <Button variant="contained" color="primary" startIcon={<SaveIcon />} onClick={handleSave} sx={{ mr: 1 }}>
-                  Sauvegarder {tabKeyLabel}
-                </Button>
-                <Button variant="contained" endIcon={<NavigateNextIcon />} onClick={handleNext} disabled={currentIndex === stepsOrder.length - 1}>
-                   Suivant
-                </Button>
+            </MainButton>
+            <Box>
+              <MainButton color="primary" onClick={handleSave} startIcon={<SaveIcon />} sx={{ mr: 1, minWidth: 150 }}>
+                Sauvegarder {tabKeyLabel || 'D7'}
+              </MainButton>
+              <MainButton color="primary" onClick={handleNext} disabled={currentIndex === stepsOrder.length - 1} endIcon={<NavigateNextIcon />} sx={{ minWidth: 120 }}>
+                Suivant
+              </MainButton>
             </Box>
          </Box>
       </Grid>

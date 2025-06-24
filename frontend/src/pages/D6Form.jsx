@@ -6,6 +6,8 @@ import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import SaveIcon from '@mui/icons-material/Save';
 import { useForm8D } from '../contexts/Form8DContext';
 import { useParams } from 'react-router-dom';
+import { COLORS } from '../colors';
+import MainButton from '../components/MainButton';
 
 // Importer le composant pour la liste des actions
 import ActionImplementationList from '../components/6D/ActionImplementationList';
@@ -172,12 +174,12 @@ function D6Form({
 
   // --- Rendu (inchangé) ---
   return (
-    <Box component="div" sx={{ p: 2, maxWidth: 900, margin: '0 auto' }}>
-      <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
+    <Box component="div" sx={{ p: 2, maxWidth: 900, margin: '0 auto', background: COLORS.background, borderRadius: 4, boxShadow: '0 4px 24px 0 rgba(35,57,93,0.10)', border: `1.5px solid ${COLORS.primaryDark}20` }}>
+      <Typography variant="h6" gutterBottom sx={{ mb: 2, color: COLORS.white, fontWeight: 700, letterSpacing: 1, background: COLORS.primaryDark, padding: '1rem 2rem', borderRadius: 2, boxShadow: '0 2px 8px rgba(35,57,93,0.08)', textAlign: 'center' }}>
         D6 – Vérification de l’Efficacité des Actions Correctives
       </Typography>
-      <Paper elevation={2} sx={{ p: 2, mb: 3 }}>
-        <Typography variant="subtitle1" sx={{ mb: 1 }}>
+      <Paper elevation={2} sx={{ p: 2, mb: 3, background: COLORS.white, borderRadius: 3, boxShadow: '0 2px 8px #e3eafc' }}>
+        <Typography variant="subtitle1" sx={{ mb: 1, color: COLORS.primaryDark, fontWeight: 600 }}>
           Vérification de l’efficacité des actions correctives
         </Typography>
         <ActionImplementationList actionsByRootCause={implementedActions} onActionUpdate={handleActionUpdate} />
@@ -190,16 +192,16 @@ function D6Form({
       </Snackbar>
       {/* Barre de navigation et sauvegarde */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 3 }}>
-        <Button variant="outlined" startIcon={<NavigateBeforeIcon />} onClick={handlePrevious} disabled={currentIndex === 0}>
+        <MainButton color="primary" onClick={handlePrevious} disabled={currentIndex === 0} startIcon={<NavigateBeforeIcon />} sx={{ minWidth: 120 }}>
           Précédent
-        </Button>
+        </MainButton>
         <Box>
-          <Button variant="contained" color="primary" startIcon={<SaveIcon />} onClick={handleSave} sx={{ mr: 1 }}>
+          <MainButton color="primary" onClick={handleSave} startIcon={<SaveIcon />} sx={{ mr: 1, minWidth: 150 }}>
             Sauvegarder {tabKeyLabel}
-          </Button>
-          <Button variant="contained" endIcon={<NavigateNextIcon />} onClick={handleNext} disabled={currentIndex === stepsOrder.length - 1}>
+          </MainButton>
+          <MainButton color="primary" onClick={handleNext} disabled={currentIndex === stepsOrder.length - 1} endIcon={<NavigateNextIcon />} sx={{ minWidth: 120 }}>
             Suivant
-          </Button>
+          </MainButton>
         </Box>
       </Box>
       {/* Préparation pour ChatAssistant (décommenter pour intégrer) */}

@@ -10,6 +10,7 @@ import { useParams } from 'react-router-dom';
 import RootCauseSelector from '../components/5D/RootCauseSelector';
 import ActionPlanner from '../components/5D/ActionPlanner';
 import { useForm8D } from '../contexts/Form8DContext';
+import MainButton from '../components/MainButton';
 
 // --- Définition des Props Attendues ---
 // activeTabIndex, totalTabs, onNavigate: Pour la navigation entre étapes
@@ -159,17 +160,17 @@ function D5Form({
         </Alert>
       </Snackbar>
       {/* Barre de navigation et sauvegarde */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 3 }}>
-        <Button variant="outlined" startIcon={<NavigateBeforeIcon />} onClick={handlePrevious} disabled={currentIndex === 0}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 4 }}>
+        <MainButton color="primary" onClick={handlePrevious} disabled={currentIndex === 0} startIcon={<NavigateBeforeIcon />} sx={{ minWidth: 120 }}>
           Précédent
-        </Button>
+        </MainButton>
         <Box>
-          <Button variant="contained" color="primary" startIcon={<SaveIcon />} onClick={handleSave} sx={{ mr: 1 }}>
-            Sauvegarder {tabKeyLabel}
-          </Button>
-          <Button variant="contained" endIcon={<NavigateNextIcon />} onClick={handleNext} disabled={currentIndex === stepsOrder.length - 1}>
+          <MainButton color="primary" onClick={handleSave} startIcon={<SaveIcon />} sx={{ mr: 1, minWidth: 150 }}>
+            Sauvegarder {tabKeyLabel || 'D5'}
+          </MainButton>
+          <MainButton color="primary" onClick={handleNext} disabled={currentIndex === stepsOrder.length - 1} endIcon={<NavigateNextIcon />} sx={{ minWidth: 120 }}>
             Suivant
-          </Button>
+          </MainButton>
         </Box>
       </Box>
       {/* Préparation pour ChatAssistant (décommenter pour intégrer) */}
