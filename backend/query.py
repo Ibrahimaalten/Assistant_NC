@@ -4,13 +4,35 @@ from backend.routeur import detect_prompt
 from backend.get_vector_db import get_vectorstore
 from langchain_core.documents import Document
 from langchain_core.prompts import ChatPromptTemplate # Pour le prompt par défaut
-
+from langchain_community.retrievers import BM25Retriever
 
 # Configuration
 DB_DIR = "C:/Users/lrodembourg/Documents/Test_Langchain/chroma_db"
 ollama_endpoint = "http://localhost:11434"
 
+def get_hybrid_retriever(vectorstore, bm25_docs, emb_weight=0.6, bm25_weight=0.4, k=3):
+    """
+    Combine un retriever embeddings (vectorstore) et un retriever BM25 sur les mêmes documents.
+    Retourne les k meilleurs documents selon le score pondéré.
+    """
+    bm25_retriever = BM25Retriever.from_documents(bm25_docs)
+    bm25_retriever.k = k
+    emb_retriever = vectorstore.as_retriever(search_kwargs={"k": k})
 
+    def hybrid_search(query):
+        emb_results = emb_retriever.invoke(query)
+        bm25_results = bm25_retriever.invoke(query)
+        # Score simple : emb = 1, bm25 = 1, on pondère par le poids
+        scored = {}
+        for doc in emb_results:
+            scored[doc.page_content] = scored.get(doc.page_content, 0) + emb_weight
+        for doc in bm25_results:
+            scored[doc.page_content] = scored.get(doc.page_content, 0) + bm25_weight
+        # Reconstituer les objets Document originaux, triés par score
+        all_docs = {doc.page_content: doc for doc in emb_results + bm25_results}
+        sorted_docs = sorted(scored.items(), key=lambda x: x[1], reverse=True)
+        return [all_docs[content] for content, _ in sorted_docs[:k]]
+    return hybrid_search
 
 def query_documents(query_text):
     vectorstore = get_vectorstore()
@@ -65,12 +87,15 @@ async def query_documents_with_context(query_text: str, form_data: dict, current
 
     # 2. Initialisation et récupération des documents
     vectorstore = get_vectorstore()
-    retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
+    # Charger tous les documents pour BM25 (depuis la base vectorielle)
+    all_docs = vectorstore.get(include=['documents'])['documents']
+    bm25_docs = [Document(page_content=doc['page_content'], metadata=doc['metadata']) for doc in all_docs]
+    hybrid_retriever = get_hybrid_retriever(vectorstore, bm25_docs, emb_weight=0.6, bm25_weight=0.4, k=3)
     retrieved_docs = []
     try:
-        retrieved_docs = retriever.invoke(enriched_query_for_retriever)
-        print(f"RAG: {len(retrieved_docs)} documents récupérés.")
-        for i, doc_debug in enumerate(retrieved_docs): # Logs de débogage des métadonnées
+        retrieved_docs = hybrid_retriever(enriched_query_for_retriever)
+        print(f"RAG: {len(retrieved_docs)} documents récupérés (hybride).")
+        for i, doc_debug in enumerate(retrieved_docs):
             print(f"  Doc récupéré {i} - METADATA COMPLÈTE: {doc_debug.metadata if hasattr(doc_debug, 'metadata') else 'PAS DE METADATA'}")
             if hasattr(doc_debug, 'metadata'):
                 print(f"    -> id_non_conformite: {doc_debug.metadata.get('id_non_conformite', 'NON TROUVÉ')}")
