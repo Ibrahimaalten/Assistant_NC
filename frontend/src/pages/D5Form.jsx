@@ -143,8 +143,8 @@ function D5Form({
         {/* Gestion des Actions 5D (remplacement de GestionActions5D) */}
         <RootCauseSelector
           rootCauses={identifiedRootCauses}
-          selectedRootCause={selectedRootCause || ''}
-          onSelectRootCause={handleSelectRootCause}
+          selectedCause={selectedRootCause || ''}
+          onSelectCause={handleSelectRootCause}
         />
         <ActionPlanner
           rootCause={selectedRootCause || ''}
