@@ -125,21 +125,6 @@ function D6Form({
       return Object.keys(tempErrors).length === 0;
   };
 
-  // Supprimez toute référence à stepsOrder2 et gardez uniquement stepsOrder
-  // const stepsOrder = [
-  //   'd0_initialisation',
-  //   'd1_team',
-  //   'd2_problem',
-  //   'd3_containment',
-  //   'd4_rootcause',
-  //   'd5_correctiveactions',
-  //   'd6_implementvalidate',
-  //   'd7_preventrecurrence',
-  //   'd8_congratulate'
-  // ];
-  // Vérifiez que partout dans le fichier, seule la variable stepsOrder est utilisée pour la navigation
-  // const currentIndex = stepsOrder.indexOf(currentStepKey);
-
   // --- Ajout du handler pour fermer le Snackbar (manquant) ---
   const handleCloseSnackbar = () => setSaveFeedback(prev => ({ ...prev, open: false }));
 
@@ -169,6 +154,20 @@ function D6Form({
 
   const handleSave = () => {
     handleSubmitToAPI();
+  };
+
+  // --- Navigation ---
+  const handlePrevious = () => {
+    if (currentIndex > 0) {
+      setCurrentStepKey(stepsOrder[currentIndex - 1]);
+      window.scrollTo(0, 0);
+    }
+  };
+  const handleNext = () => {
+    if (currentIndex < stepsOrder.length - 1) {
+      setCurrentStepKey(stepsOrder[currentIndex + 1]);
+      window.scrollTo(0, 0);
+    }
   };
 
   // --- Rendu (inchangé) ---
