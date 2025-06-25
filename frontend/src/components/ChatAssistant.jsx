@@ -134,8 +134,8 @@ function ChatAssistant() {
                 dataChunk.sources.map(s => 
                   `<li>` +
                   `  <strong>NC ID:</strong> ${s.nc_id || 'N/A'}<br/>` +
-                  `  <strong>Fichier:</strong> ${s.source_file || 'N/A'}<br/>` +
-                  `  <strong>Aperçu:</strong> <small>${s.preview || 'Aucun aperçu disponible'}</small>` +
+                  `  <strong>Fichier:</strong> ${ s.source || 'N/A'}<br/>` +
+                  `  <strong>Aperçu:</strong> <small>${ s.content || 'Aucun aperçu disponible'}</small>` +
                   `</li>`
                 ).join('') + "</ul>";
 
@@ -258,7 +258,7 @@ function ChatAssistant() {
             </Avatar>
             <Box 
               sx={{
-                bgcolor: msg.sender === 'user' ? COLORS.primaryGradient : 
+                bgcolor: msg.sender === 'user' ? COLORS.primaryDark : 
                          (msg.sender === 'error' ? '#ffeaea' : 
                          (msg.sender === 'system' ? '#e6f7ef' : '#eaf1fb')),
                 color: msg.sender === 'user' ? COLORS.white : (msg.sender === 'error' ? COLORS.error : (msg.sender === 'system' ? '#218c5a' : COLORS.primaryDark)),

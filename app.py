@@ -120,12 +120,20 @@ async def process_contextual_query(payload: QueryContextPayload):
         # Formate les sources comme dans le RAG
         sources = []
         for doc in docs:
+            # Aperçu = Description du problème 0D si dispo, sinon page_content
+            description = doc.metadata.get("Description du problème 0D") or doc.page_content[:200] + "..."
             source = {
-                "content": doc.page_content[:200] + "...",
-                "nc_id": doc.metadata.get("id_non_conformite", "Inconnu"),
-                "source": doc.metadata.get("nom_fichier_source", "Unknown")
+                "content": description,
+                "nc_id": doc.metadata.get("id_non_conformite", doc.metadata.get("Identification NC 0D", "Inconnu")),
+                "source": doc.metadata.get("nom_fichier_source", "N/A")
             }
             sources.append(source)
+        print("[DEBUG SOURCES RETRIEVAL] Nombre de sources récupérées:", len(sources))
+        for idx, src in enumerate(sources):
+            print(f"  Source {idx+1}: NC ID: {src['nc_id']} | Fichier: {src['source']} | Aperçu: {src['content'][:60]}")
+            # Log complet des métadonnées du document source
+            if idx < len(docs):
+                print(f"    [META] Métadonnées complètes: {getattr(docs[idx], 'metadata', {})}")
         def simple_stream():
             yield json.dumps({"sources": sources, "done": True}, ensure_ascii=False) + "\n"
         return StreamingResponse(simple_stream(), media_type="application/jsonlines")
@@ -135,9 +143,16 @@ async def process_contextual_query(payload: QueryContextPayload):
             form_data=form_data_8d,
             current_section_data=current_section_data_8d,
             current_section_name=current_section_name_8d,
-            stream=True
+            stream=True,
+            retrieval_mode="vector",
         ):
-            # Si mode REQ, ne renvoyer que les sources et done (pas de réponse LLM)
+            if 'sources' in chunk:
+                print("[DEBUG SOURCES STREAM] Nombre de sources dans chunk:", len(chunk['sources']))
+                for idx, src in enumerate(chunk['sources']):
+                    print(f"  Source {idx+1}: NC ID: {src.get('nc_id', 'N/A')} | Fichier: {src.get('source_file', src.get('source', 'N/A'))} | Aperçu: {src.get('preview', src.get('content', 'N/A'))[:60]}")
+                    # Log complet des métadonnées du document source si possible
+                    if 'retrieved_docs' in chunk and idx < len(chunk['retrieved_docs']):
+                        print(f"    [META] Métadonnées complètes: {getattr(chunk['retrieved_docs'][idx], 'metadata', {})}")
             if mode == 'REQ' and chunk.get('done'):
                 yield json.dumps({"sources": chunk.get('sources', []), "done": True}, ensure_ascii=False) + "\n"
             elif mode == 'REQ':

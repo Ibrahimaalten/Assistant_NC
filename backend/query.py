@@ -34,41 +34,49 @@ def get_hybrid_retriever(vectorstore, bm25_docs, emb_weight=0.6, bm25_weight=0.4
         return [all_docs[content] for content, _ in sorted_docs[:k]]
     return hybrid_search
 
-def query_documents(query_text):
+def query_documents(query_text, retrieval_mode="vector"):
     vectorstore = get_vectorstore()
-
     llm = ChatOllama(
         model="qwen3:14b",
         num_ctx=4096,
         temperature=0.5,
         base_url=ollama_endpoint,
     )
-
     selected_prompt = detect_prompt(query_text)
     # Création des composants RAG
-    retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
+    if retrieval_mode == "hybrid":
+        # Charger tous les documents pour BM25 (depuis la base vectorielle)
+        all_docs = vectorstore.get(include=['documents'])['documents']
+        bm25_docs = []
+        for doc in all_docs:
+            if isinstance(doc, Document):
+                bm25_docs.append(doc)
+            elif isinstance(doc, dict) and 'page_content' in doc and 'metadata' in doc:
+                bm25_docs.append(Document(page_content=doc['page_content'], metadata=doc['metadata']))
+            elif isinstance(doc, str):
+                bm25_docs.append(Document(page_content=doc, metadata={}))
+        retriever = get_hybrid_retriever(vectorstore, bm25_docs, emb_weight=0.6, bm25_weight=0.4, k=3)
+        retrieved_docs = retriever(query_text)
+    else:
+        retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
+        retrieved_docs = retriever.invoke(query_text)
     from langchain.chains.combine_documents import create_stuff_documents_chain
     from langchain.chains import create_retrieval_chain
     question_answer_chain = create_stuff_documents_chain(llm, selected_prompt)
-    rag_chain = create_retrieval_chain(retriever, question_answer_chain)
-
-    # Exécution
+    rag_chain = create_retrieval_chain(lambda q: retrieved_docs, question_answer_chain)
     result = rag_chain.invoke({"input": query_text})
-
-    # Extraction des sources
     sources = []
-    for doc in result.get("context", []):  # 'context' contient les documents récupérés
+    for doc in result.get("context", []):
         source = {
             "content": doc.page_content[:200] + "...",
             "nc_id": doc.metadata.get("id_non_conformite", "Inconnu"),
             "source": doc.metadata.get("nom_fichier_source", "Unknown")
         }
         sources.append(source)
+    return result["answer"], sources
 
-    return result["answer"], sources  # Retourne la réponse et les sources
-
-async def query_documents_with_context(query_text: str, form_data: dict, current_section_data: dict, current_section_name: str, stream: bool):
-    print(f"RAG: Requête: '{query_text}' pour section '{current_section_name}'")
+async def query_documents_with_context(query_text: str, form_data: dict, current_section_data: dict, current_section_name: str, stream: bool, retrieval_mode="hybrid"):
+    print(f"RAG: Requête: '{query_text}' pour section '{current_section_name}' (mode: {retrieval_mode})")
 
     # 1. Construction de la requête enrichie pour le retriever
     if not query_text.strip():
@@ -87,37 +95,45 @@ async def query_documents_with_context(query_text: str, form_data: dict, current
 
     # 2. Initialisation et récupération des documents
     vectorstore = get_vectorstore()
-    # Charger tous les documents pour BM25 (depuis la base vectorielle)
     all_docs = vectorstore.get(include=['documents'])['documents']
     bm25_docs = []
     for doc in all_docs:
-        # Si doc est déjà un Document
         if isinstance(doc, Document):
             bm25_docs.append(doc)
-        # Si doc est un dict avec les bonnes clés
         elif isinstance(doc, dict) and 'page_content' in doc and 'metadata' in doc:
             bm25_docs.append(Document(page_content=doc['page_content'], metadata=doc['metadata']))
-        # Si doc est une string (fallback)
         elif isinstance(doc, str):
             bm25_docs.append(Document(page_content=doc, metadata={}))
         else:
             print(f"[WARN] Format inattendu pour doc dans all_docs: {doc}")
-    hybrid_retriever = get_hybrid_retriever(vectorstore, bm25_docs, emb_weight=0.6, bm25_weight=0.4, k=3)
-    retrieved_docs = []
-    try:
-        retrieved_docs = hybrid_retriever(enriched_query_for_retriever)
-        print(f"RAG: {len(retrieved_docs)} documents récupérés (hybride).")
-        for i, doc_debug in enumerate(retrieved_docs):
-            print(f"  Doc récupéré {i} - METADATA COMPLÈTE: {doc_debug.metadata if hasattr(doc_debug, 'metadata') else 'PAS DE METADATA'}")
-            if hasattr(doc_debug, 'metadata'):
-                print(f"    -> id_non_conformite: {doc_debug.metadata.get('id_non_conformite', 'NON TROUVÉ')}")
-                print(f"    -> nom_fichier_source: {doc_debug.metadata.get('nom_fichier_source', 'NON TROUVÉ')}")
-    except Exception as e_ret:
-        print(f"ERREUR RAG: Échec de la récupération des documents: {e_ret}")
-        error_message_for_client = f"Désolé, une erreur est survenue lors de la recherche d'informations : {e_ret}"
-        yield {"response": error_message_for_client, "error": str(e_ret)}
-        yield {"done": True, "sources": [], "suggested_field_update": None}
-        return
+    if retrieval_mode == "hybrid":
+        retriever = get_hybrid_retriever(vectorstore, bm25_docs, emb_weight=0.6, bm25_weight=0.4, k=3)
+        retrieved_docs = []
+        try:
+            retrieved_docs = retriever(enriched_query_for_retriever)
+            print(f"RAG: {len(retrieved_docs)} documents récupérés (hybride).")
+            for i, doc_debug in enumerate(retrieved_docs):
+                print(f"  Doc récupéré {i} - METADATA COMPLÈTE: {doc_debug.metadata if hasattr(doc_debug, 'metadata') else 'PAS DE METADATA'}")
+                if hasattr(doc_debug, 'metadata'):
+                    print(f"    -> id_non_conformite: {doc_debug.metadata.get('id_non_conformite', 'NON TROUVÉ')}")
+                    print(f"    -> nom_fichier_source: {doc_debug.metadata.get('nom_fichier_source', 'NON TROUVÉ')}")
+        except Exception as e_ret:
+            print(f"ERREUR RAG: Échec de la récupération des documents: {e_ret}")
+            error_message_for_client = f"Désolé, une erreur est survenue lors de la recherche d'informations : {e_ret}"
+            yield {"response": error_message_for_client, "error": str(e_ret)}
+            yield {"done": True, "sources": [], "suggested_field_update": None}
+            return
+    else:
+        retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
+        try:
+            retrieved_docs = retriever.invoke(enriched_query_for_retriever)
+            print(f"RAG: {len(retrieved_docs)} documents récupérés (vectoriel).")
+        except Exception as e_ret:
+            print(f"ERREUR RAG: Échec de la récupération des documents: {e_ret}")
+            error_message_for_client = f"Désolé, une erreur est survenue lors de la recherche d'informations : {e_ret}"
+            yield {"response": error_message_for_client, "error": str(e_ret)}
+            yield {"done": True, "sources": [], "suggested_field_update": None}
+            return
 
     # 3. Construction des sources pour le client
     sources_for_client = []
