@@ -67,6 +67,25 @@ function ListeNonConformites() {
                 }}>
                   Voir / Modifier
                 </button>
+                <button onClick={async () => {
+                  if(window.confirm('Supprimer cette non-conformité ?')) {
+                    await fetch(`http://localhost:8000/api/nonconformites/${nc.id}`, { method: 'DELETE' });
+                    setNonConformites(ncs => ncs.filter(n => n.id !== nc.id));
+                  }
+                }} style={{
+                  marginLeft: 8,
+                  background: COLORS.error,
+                  color: COLORS.white,
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '6px 16px',
+                  cursor: 'pointer',
+                  fontWeight: 500,
+                  transition: 'background 0.2s',
+                  boxShadow: '0 1px 4px rgba(35,57,93,0.07)'
+                }}>
+                  Supprimer
+                </button>
               </td>
             </tr>
           ))}

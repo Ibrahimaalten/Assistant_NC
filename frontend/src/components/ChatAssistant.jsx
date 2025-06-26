@@ -29,6 +29,14 @@ function ChatAssistant() {
 
   useEffect(scrollToBottom, [messages]);
 
+  // Vide le chat à chaque changement de mode (chatMode)
+  useEffect(() => {
+    setMessages([
+      { id: uuidv4(), text: 'Bonjour ! Comment puis-je vous aider avec votre 8D ?', sender: 'bot', isLoading: false }
+    ]);
+    setUserInput('');
+  }, [chatMode]);
+
   const handleInputChange = (e) => setUserInput(e.target.value);
 
   const handleSendMessage = async (event) => {
