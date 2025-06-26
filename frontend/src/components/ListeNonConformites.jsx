@@ -30,6 +30,8 @@ function ListeNonConformites() {
         <thead>
           <tr style={{ background: COLORS.gradientGreen }}>
             <th style={{ padding: '1rem', color: COLORS.white, fontWeight: 700, letterSpacing: 0.5 }}>ID</th>
+            <th style={{ padding: '1rem', color: COLORS.white, fontWeight: 700, letterSpacing: 0.5 }}>Reference</th>
+
             <th style={{ color: COLORS.white, fontWeight: 700, letterSpacing: 0.5 }}>Description</th>
             <th style={{ color: COLORS.white, fontWeight: 700, letterSpacing: 0.5 }}>Responsable</th>
             <th style={{ color: COLORS.white, fontWeight: 700, letterSpacing: 0.5 }}>Statut</th>
@@ -42,6 +44,8 @@ function ListeNonConformites() {
           ) : filtered.map((nc, idx) => (
             <tr key={nc.id} style={{ background: nc.statut === 'En cours' ? 'rgba(35,57,93,0.07)' : 'rgba(46,204,113,0.08)', borderBottom: `1px solid #e0e7ef` }}>
               <td style={{ padding: '1rem', color: COLORS.textDark }}>{nc.id}</td>
+              <td style={{ padding: '1rem', color: COLORS.textDark }}>{nc.d0_initialisation.referenceNC}</td>
+
               <td style={{ color: COLORS.textGrey }}>{nc.d0_initialisation?.descriptionInitiale || ''}</td>
               <td style={{ color: COLORS.textGrey }}>{nc.d1_team?.chefEquipe?.prenom || ''} {nc.d1_team?.chefEquipe?.nom || ''}</td>
               <td>

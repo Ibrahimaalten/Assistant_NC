@@ -5,7 +5,7 @@ import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import SaveIcon from '@mui/icons-material/Save';
 import { useForm8D } from '../contexts/Form8DContext'; // Assurez-vous que ce chemin est correct
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import MainButton from '../components/MainButton';
 
 // L'ordre des étapes doit être cohérent avec tabDefinitions dans App.jsx
@@ -32,6 +32,7 @@ function D0Form({ tabKeyLabel }) {
     currentStepKey      // La clé de l'étape actuellement active
   } = useForm8D();
   const { id } = useParams();
+  const navigate = useNavigate();
 
   // --- DÉFINITION de la Clé de Section ---
   // MODIFIÉ/AJOUTÉ: Constante pour la clé de cette section dans le contexte.
@@ -127,6 +128,13 @@ function D0Form({ tabKeyLabel }) {
       });
       if (response.ok) {
         setApiStatus('success');
+        if (!id && method === 'POST') {
+          // Récupère l'id de la nouvelle NC et redirige vers l'édition
+          const data = await response.json();
+          if (data && data.id) {
+            navigate(`/d0/${data.id}`); // À adapter selon ton routing
+          }
+        }
       } else {
         setApiStatus('error');
       }

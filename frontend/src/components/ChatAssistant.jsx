@@ -78,6 +78,35 @@ function ChatAssistant() {
         const errorData = await response.json().catch(() => ({ detail: `Erreur HTTP ${response.status}` }));
         throw new Error(errorData.detail || `Erreur serveur ${response.status}`);
       }
+
+      if (chatMode === 'REQ') {
+        // Mode REQ : réponse JSON directe
+        const data = await response.json();
+        setMessages(prev => prev.map(m => m.id === botMessageId ? { ...m, isLoading: false } : m));
+        if (data.sources && Array.isArray(data.sources) && data.sources.length > 0) {
+          const sourceHtmlContent = "<strong>Sources Pertinentes :</strong><ul>" +
+            data.sources.map(s =>
+              `<li>` +
+              `  <strong>NC ID:</strong> ${s.nc_id || 'N/A'}<br/>` +
+              `  <strong>Fichier:</strong> ${ s.source_file || 'N/A'}<br/>` +
+              `  <strong>Aperçu:</strong> <small>${ s.preview || 'Aucun aperçu disponible'}</small>` +
+              `</li>`
+            ).join('') + "</ul>";
+          const sourcesMessageObject = {
+            id: uuidv4(),
+            htmlText: sourceHtmlContent,
+            sender: 'system',
+            isSourceBubble: true
+          };
+          setMessages(prev => [...prev, sourcesMessageObject]);
+        } else {
+          setMessages(prev => prev.map(m => m.id === botMessageId ? { ...m, text: 'Aucune source similaire trouvée.', isLoading: false } : m));
+        }
+        setIsOverallLoading(false);
+        streamReaderRef.current = null;
+        return;
+      }
+      
       if (!response.body) throw new Error('Pas de flux de réponse du serveur.');
       
       const reader = response.body.getReader();
