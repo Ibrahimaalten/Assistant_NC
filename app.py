@@ -124,13 +124,12 @@ async def process_contextual_query(payload: QueryContextPayload):
             description = doc.metadata.get("Description du problème 0D") or doc.page_content[:200] + "..."
             source = {
                 "content": description,
-                "nc_id": doc.metadata.get("id_non_conformite", doc.metadata.get("Identification NC 0D", "Inconnu")),
-                "source": doc.metadata.get("nom_fichier_source", "N/A")
+                "nc_id": doc.metadata.get("Identification NC 0D", "Inconnu"),
             }
             sources.append(source)
         print("[DEBUG SOURCES RETRIEVAL] Nombre de sources récupérées:", len(sources))
         for idx, src in enumerate(sources):
-            print(f"  Source {idx+1}: NC ID: {src['nc_id']} | Fichier: {src['source']} | Aperçu: {src['content'][:60]}")
+            print(f"  Source {idx+1}: NC ID: {src['nc_id']} |Aperçu: {src['content'][:60]}")
             # Log complet des métadonnées du document source
             if idx < len(docs):
                 print(f"    [META] Métadonnées complètes: {getattr(docs[idx], 'metadata', {})}")

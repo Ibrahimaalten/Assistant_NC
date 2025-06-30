@@ -88,8 +88,7 @@ function ChatAssistant() {
             data.sources.map(s =>
               `<li>` +
               `  <strong>NC ID:</strong> ${s.nc_id || 'N/A'}<br/>` +
-              `  <strong>Fichier:</strong> ${ s.source_file || 'N/A'}<br/>` +
-              `  <strong>Aperçu:</strong> <small>${ s.preview || 'Aucun aperçu disponible'}</small>` +
+              `  <strong>Aperçu:</strong> <small>${ s.content || 'Aucun aperçu disponible'}</small>` +
               `</li>`
             ).join('') + "</ul>";
           const sourcesMessageObject = {
@@ -171,7 +170,6 @@ function ChatAssistant() {
                 dataChunk.sources.map(s => 
                   `<li>` +
                   `  <strong>NC ID:</strong> ${s.nc_id || 'N/A'}<br/>` +
-                  `  <strong>Fichier:</strong> ${ s.source || 'N/A'}<br/>` +
                   `  <strong>Aperçu:</strong> <small>${ s.content || 'Aucun aperçu disponible'}</small>` +
                   `</li>`
                 ).join('') + "</ul>";
