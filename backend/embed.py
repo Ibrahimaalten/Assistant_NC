@@ -1,13 +1,13 @@
 import os
 from langchain_community.document_loaders import DirectoryLoader, TextLoader, PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter # Tu en auras peut-être besoin pour les PDF/TXT
-from langchain_ollama.embeddings import OllamaEmbeddings
+from langchain_ollama import OllamaEmbeddings
 from langchain_community.vectorstores import Chroma # Langchain_community est l'import standard
 import pandas as pd
 from langchain_core.documents import Document
 from pathlib import Path
 import shutil # Pour supprimer l'ancien DB_DIR
-import json
+import re
 
 
 # Configuration des chemins
@@ -75,53 +75,18 @@ def load_csv_for_rag(file_path):
         docs.append(doc)
     return docs
 
-# def csv_to_json(csv_path, json_path):
-#     """
-#     Convertit un fichier CSV en JSON (liste de dictionnaires).
-#     """
-#     import pandas as pd
-#     df = pd.read_csv(csv_path, sep=';')
-#     records = df.to_dict(orient='records')
-#     with open(json_path, 'w', encoding='utf-8') as f:
-#         json.dump(records, f, ensure_ascii=False, indent=2)
-#     print(f"Conversion terminée : {csv_path} -> {json_path}")
-#     return json_path
-
-# def load_json_for_rag(json_path):
-#     """
-#     Charge un fichier JSON (liste de dicts) et retourne une liste de Document.
-#     Gère les NaN et valeurs non-string.
-#     """
-#     import math
-#     with open(json_path, 'r', encoding='utf-8') as f:
-#         data = json.load(f)
-#     docs = []
-#     for row in data:
-#         page_content = row.get('Description du problème 0D', '')
-#         # Gère NaN ou non-string
-#         if not isinstance(page_content, str) or (isinstance(page_content, float) and math.isnan(page_content)):
-#             page_content = ''
-#         if not page_content:
-#             # Fallback sur la première colonne non vide
-#             for v in row.values():
-#                 if isinstance(v, str) and v:
-#                     page_content = v
-#                     break
-#                 elif isinstance(v, float) and not math.isnan(v):
-#                     page_content = str(v)
-#                     break
-#         # Nettoie les métadonnées
-#         metadata = {k: (str(v) if (isinstance(v, str) or isinstance(v, int) or isinstance(v, float)) and not (isinstance(v, float) and math.isnan(v)) else '') for k, v in row.items()}
-#         docs.append(Document(page_content=page_content, metadata=metadata))
-#     return docs
-
-from langchain_ollama import OllamaEmbeddings
 
 def get_embedding_model(model: str):
         return OllamaEmbeddings(model=model)
-def get_collection_name_from_model(model):
-    # Simplifie et nettoie le nom du modèle pour l'utiliser comme nom de collection
-    return model.replace("/", "_").replace(":", "_")
+# def get_collection_name_from_model(model):
+#     # Simplifie et nettoie le nom du modèle pour l'utiliser comme nom de collection
+#     return model.replace("/", "_").replace(":", "_")
+def get_collection_name_from_model_id(model_id: str) -> str:
+    """Crée un nom de collection valide pour ChromaDB à partir de l'ID du modèle."""
+    # Remplace les caractères non autorisés par des underscores
+    safe_name = re.sub(r'[^a-zA-Z0-9_-]', '_', model_id)
+    # ChromaDB recommande des noms entre 3 et 63 caractères
+    return f"coll_{safe_name[:55]}"
 def load_documents_main():
     """
     Charge tous les documents (TXT, PDF, et un CSV spécifique) depuis le répertoire DOCUMENTS_DIR.
@@ -192,18 +157,28 @@ def process_and_embed_documents(model: str):
     print("Initialisation du modèle d'embedding...")
 
     embedding_model = get_embedding_model(model)
-    collection_name = get_collection_name_from_model(model)
+    collection_name = get_collection_name_from_model_id(model)
 
+    print(f"Création de la collection '{collection_name}' dans le répertoire {DB_DIR}...")
+    # --- NOUVELLE LOGIQUE D'INDEXATION ROBUSTE ---
+    print(f"Connexion au client ChromaDB persistant dans le répertoire : {DB_DIR}")
 
-    print(f"Création de la base vectorielle Chroma dans {DB_DIR} avec la collection {collection_name}...")
+# # Optionnel mais recommandé : Supprimer l'ancien répertoire pour un nouveau départ
+#     if os.path.exists(DB_DIR):
+#         print(f"Suppression de l'ancien répertoire de base de données : {DB_DIR}")
+#         shutil.rmtree(DB_DIR)
+
+    print(f"Création de la nouvelle collection '{collection_name}'...")
+    # On ajoute les documents à CETTE collection spécifique
     vectorstore = Chroma.from_documents(
-        collection_name=collection_name,
-        documents=final_documents_to_embed, # Utiliser ces documents
+        documents=final_documents_to_embed,
         embedding=embedding_model,
-        persist_directory=DB_DIR
+        collection_name=collection_name,
+        persist_directory=DB_DIR  # Très important !
     )
+    count = vectorstore._collection.count()
 
-    print(f"Base de données vectorielle créée/mise à jour avec {len(final_documents_to_embed)} documents.")
+    print(f"Base de données vectorielle créée/mise à jour avec {count} documents.")
     return vectorstore
 
 if __name__ == "__main__":
@@ -212,7 +187,7 @@ if __name__ == "__main__":
         print(f"ERREUR: Le répertoire de documents '{DOCUMENTS_DIR}' n'existe pas.")
     else:
         # vs = process_and_embed_documents(model="dengcao/Qwen3-Embedding-4B:q5_K_M")
-        vs = process_and_embed_documents(model="dengcao/Qwen3-Embedding-4B:q5_K_M")
+        vs = process_and_embed_documents(model="snowflake-arctic-embed2:latest")  # Utilise le modèle Snowflake pour l'exemple
 
         if vs:
             print("Processus d'embedding terminé avec succès.")

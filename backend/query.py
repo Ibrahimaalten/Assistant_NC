@@ -1,40 +1,17 @@
 from langchain_community.vectorstores import Chroma
 from langchain_ollama import ChatOllama
-from backend.routeur import detect_prompt
-from backend.get_vector_db import get_vectorstore
 from langchain_core.documents import Document
 from langchain_core.prompts import ChatPromptTemplate # Pour le prompt par défaut
-from langchain_community.retrievers import BM25Retriever
+from backend.utils import  build_sources
+from backend.routeur import detect_prompt
+from backend.get_vector_db import get_vectorstore
+from backend.retrieval import get_relevant_documents
 
 # Configuration
 DB_DIR = "C:/Users/lrodembourg/Documents/Test_Langchain/chroma_db"
 ollama_endpoint = "http://localhost:11434"
 
-def get_hybrid_retriever(vectorstore, bm25_docs, emb_weight=0.6, bm25_weight=0.4, k=3):
-    """
-    Combine un retriever embeddings (vectorstore) et un retriever BM25 sur les mêmes documents.
-    Retourne les k meilleurs documents selon le score pondéré.
-    """
-    bm25_retriever = BM25Retriever.from_documents(bm25_docs)
-    bm25_retriever.k = k
-    emb_retriever = vectorstore.as_retriever(search_kwargs={"k": k})
-
-    def hybrid_search(query):
-        emb_results = emb_retriever.invoke(query)
-        bm25_results = bm25_retriever.invoke(query)
-        # Score simple : emb = 1, bm25 = 1, on pondère par le poids
-        scored = {}
-        for doc in emb_results:
-            scored[doc.page_content] = scored.get(doc.page_content, 0) + emb_weight
-        for doc in bm25_results:
-            scored[doc.page_content] = scored.get(doc.page_content, 0) + bm25_weight
-        # Reconstituer les objets Document originaux, triés par score
-        all_docs = {doc.page_content: doc for doc in emb_results + bm25_results}
-        sorted_docs = sorted(scored.items(), key=lambda x: x[1], reverse=True)
-        return [all_docs[content] for content, _ in sorted_docs[:k]]
-    return hybrid_search
-
-def query_documents(query_text, retrieval_mode="vector"):
+def query_documents(query_text, ):
     vectorstore = get_vectorstore()
     llm = ChatOllama(
         model="qwen3:14b",
@@ -44,22 +21,8 @@ def query_documents(query_text, retrieval_mode="vector"):
     )
     selected_prompt = detect_prompt(query_text)
     # Création des composants RAG
-    if retrieval_mode == "hybrid":
-        # Charger tous les documents pour BM25 (depuis la base vectorielle)
-        all_docs = vectorstore.get(include=['documents'])['documents']
-        bm25_docs = []
-        for doc in all_docs:
-            if isinstance(doc, Document):
-                bm25_docs.append(doc)
-            elif isinstance(doc, dict) and 'page_content' in doc and 'metadata' in doc:
-                bm25_docs.append(Document(page_content=doc['page_content'], metadata=doc['metadata']))
-            elif isinstance(doc, str):
-                bm25_docs.append(Document(page_content=doc, metadata={}))
-        retriever = get_hybrid_retriever(vectorstore, bm25_docs, emb_weight=0.6, bm25_weight=0.4, k=3)
-        retrieved_docs = retriever(query_text)
-    else:
-        retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
-        retrieved_docs = retriever.invoke(query_text)
+    retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
+    retrieved_docs = retriever.invoke(query_text)
     from langchain.chains.combine_documents import create_stuff_documents_chain
     from langchain.chains import create_retrieval_chain
     question_answer_chain = create_stuff_documents_chain(llm, selected_prompt)
@@ -75,75 +38,27 @@ def query_documents(query_text, retrieval_mode="vector"):
         sources.append(source)
     return result["answer"], sources
 
-async def query_documents_with_context(query_text: str, form_data: dict, current_section_data: dict, current_section_name: str, stream: bool, retrieval_mode="hybrid"):
-    print(f"RAG: Requête: '{query_text}' pour section '{current_section_name}' (mode: {retrieval_mode})")
-
-    # 1. Construction de la requête enrichie pour le retriever
-    if not query_text.strip():
-        description_nc_initiale = form_data.get('d0_initialisation', {}).get('Description du problème 0D', '')
-        if description_nc_initiale:
-            enriched_query_for_retriever = f"Analyse de la non-conformité : {description_nc_initiale}"
-        else:
-            enriched_query_for_retriever = f"Analyse du formulaire 8D, section {current_section_name}"
-    else:
-        enriched_query_for_retriever = query_text
-        if current_section_data:
-            context_fields_text = ' '.join([str(v) for k, v in current_section_data.items() if v and k != 'id'])
-            if context_fields_text:
-                enriched_query_for_retriever += f" (contexte de {current_section_name}: {context_fields_text})"
-    print(f"RAG: Requête Enrichie pour RETRIEVER: '{enriched_query_for_retriever}'")
-
+async def query_documents_with_context(query_text: str, form_data: dict, current_section_data: dict, current_section_name: str, stream: bool, model_key:int):
+    print(f"RAG: Requête: '{query_text}' pour section '{current_section_name}' ")
     # 2. Initialisation et récupération des documents
-    vectorstore = get_vectorstore()
-    all_docs = vectorstore.get(include=['documents'])['documents']
-    bm25_docs = []
-    for doc in all_docs:
-        if isinstance(doc, Document):
-            bm25_docs.append(doc)
-        elif isinstance(doc, dict) and 'page_content' in doc and 'metadata' in doc:
-            bm25_docs.append(Document(page_content=doc['page_content'], metadata=doc['metadata']))
-        elif isinstance(doc, str):
-            bm25_docs.append(Document(page_content=doc, metadata={}))
-        else:
-            print(f"[WARN] Format inattendu pour doc dans all_docs: {doc}")
-    if retrieval_mode == "hybrid":
-        retriever = get_hybrid_retriever(vectorstore, bm25_docs, emb_weight=0.6, bm25_weight=0.4, k=3)
-        retrieved_docs = []
-        try:
-            retrieved_docs = retriever(enriched_query_for_retriever)
-            print(f"RAG: {len(retrieved_docs)} documents récupérés (hybride).")
-            for i, doc_debug in enumerate(retrieved_docs):
-                print(f"  Doc récupéré {i} - METADATA COMPLÈTE: {doc_debug.metadata if hasattr(doc_debug, 'metadata') else 'PAS DE METADATA'}")
-                if hasattr(doc_debug, 'metadata'):
-                    print(f"    -> id_non_conformite: {doc_debug.metadata.get('id_non_conformite', 'NON TROUVÉ')}")
-                    print(f"    -> nom_fichier_source: {doc_debug.metadata.get('nom_fichier_source', 'NON TROUVÉ')}")
-        except Exception as e_ret:
-            print(f"ERREUR RAG: Échec de la récupération des documents: {e_ret}")
-            error_message_for_client = f"Désolé, une erreur est survenue lors de la recherche d'informations : {e_ret}"
-            yield {"response": error_message_for_client, "error": str(e_ret)}
-            yield {"done": True, "sources": [], "suggested_field_update": None}
-            return
-    else:
-        retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
-        try:
-            retrieved_docs = retriever.invoke(enriched_query_for_retriever)
-            print(f"RAG: {len(retrieved_docs)} documents récupérés (vectoriel).")
-        except Exception as e_ret:
-            print(f"ERREUR RAG: Échec de la récupération des documents: {e_ret}")
-            error_message_for_client = f"Désolé, une erreur est survenue lors de la recherche d'informations : {e_ret}"
-            yield {"response": error_message_for_client, "error": str(e_ret)}
-            yield {"done": True, "sources": [], "suggested_field_update": None}
-            return
+    try:
+        retrieved_docs = get_relevant_documents(
+            query_text=query_text,
+            current_section_data=current_section_data,
+            current_section_name=current_section_name,
+            form_data=form_data, # On passe le form_data complet
+            model_key=model_key, # On passe le model_key pour flexibilité
+        )
+    except Exception as e_ret:
+        print(f"ERREUR RAG: Échec de la récupération des documents: {e_ret}")
+        error_message_for_client = f"Désolé, une erreur est survenue lors de la recherche d'informations : {e_ret}"
+        yield {"response": error_message_for_client, "error": str(e_ret)}
+        yield {"done": True, "sources": [], "suggested_field_update": None}
+        return
 
     # 3. Construction des sources pour le client
-    sources_for_client = []
-    if retrieved_docs:
-        for doc_item in retrieved_docs:
-            if not hasattr(doc_item, 'metadata'): continue
-            nc_id = doc_item.metadata.get("id_non_conformite", "ID NC Manquant") # ADAPTE CETTE CLÉ
-            nom_fichier = doc_item.metadata.get("nom_fichier_source", "Source Manquante") # ADAPTE CETTE CLÉ
-            source_entry = { "nc_id": nc_id, "source_file": nom_fichier, "preview": doc_item.page_content[:150] + "..." if hasattr(doc_item, 'page_content') else "N/A"}
-            sources_for_client.append(source_entry)
+    sources_for_client = build_sources(retrieved_docs, mode="RAG")
+    
     print(f"RAG: Sources construites pour le client: {sources_for_client}")
 
     # 4. Formatage du contexte pour le LLM (basé sur retrieved_docs)
@@ -228,29 +143,4 @@ async def query_documents_with_context(query_text: str, form_data: dict, current
         
         print(f"RAG STREAM: Yield final: sources: {sources_for_client}, suggestion: {suggested_field_update}")
         yield {"done": True, "sources": sources_for_client, "suggested_field_update": suggested_field_update}
-    
-    else: # Branche non-streamée
-        print(f"--- DÉBUT LOGIQUE NON-STREAMING ---")
-        chain_input_non_stream = {"input": query_text, "context": context_to_pass_to_llm}
-        answer_non_stream = "[Réponse non initialisée]"
-        try:
-            result_obj_llm = await question_answer_chain.ainvoke(chain_input_non_stream)
-            answer_non_stream = result_obj_llm
-            if hasattr(result_obj_llm, 'content'): answer_non_stream = result_obj_llm.content
-            elif not isinstance(result_obj_llm, str): answer_non_stream = str(result_obj_llm)
-        except Exception as e_llm_invoke:
-            print(f"ERREUR NON-STREAM: Échec de l'appel LLM: {e_llm_invoke}")
-            answer_non_stream = f"Erreur lors de la génération de la réponse : {e_llm_invoke}"
-        
-        suggested_field_update = None
-        if (not query_text.strip() or "sponsor" in query_text.lower()) and current_section_name == "d1_team" and not form_data.get('d1_team', {}).get('Sponsor'):
-            suggested_field_update = {"section": "d1_team", "field": "Sponsor", "value": "Nom du Sponsor à définir"}
-
-        print(f"NON-STREAM: Yielding single response object. Answer: '{str(answer_non_stream)[:50]}...', Sources: {len(sources_for_client)}")
-        yield {
-            "response": str(answer_non_stream),
-            "sources": sources_for_client,
-            "suggested_field_update": suggested_field_update,
-            "done": True
-        }
     return # Fin du générateur asynchrone

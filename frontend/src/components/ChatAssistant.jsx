@@ -62,7 +62,8 @@ function ChatAssistant() {
         form_data: all8DData,
         current_section_data: currentSectionData,
         current_section_name: currentStepKey,
-        mode: chatMode // <-- Ajout du mode
+        mode: chatMode,
+        model_key : "dengcao_qwen3_4b"
       };
 
       // Ajoute une bulle de bot en attente
