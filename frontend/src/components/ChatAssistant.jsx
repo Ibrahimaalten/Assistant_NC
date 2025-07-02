@@ -55,7 +55,7 @@ function ChatAssistant() {
     const currentSectionData = form8DData[currentStepKey] || {};
     
     let botMessageId = uuidv4(); // ID pour la bulle de réponse du bot
-
+///////Modif du moèdle d'embedding dans model_key , allez voir dans config.py pour les modèles disponibles
     try {
       const payload = {
         query: text,

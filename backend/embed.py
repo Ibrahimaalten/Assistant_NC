@@ -8,6 +8,7 @@ from langchain_core.documents import Document
 from pathlib import Path
 import shutil # Pour supprimer l'ancien DB_DIR
 import re
+import chromadb
 
 
 # Configuration des chemins
@@ -128,7 +129,44 @@ def load_documents_main():
     return all_documents
 
 
-def process_and_embed_documents(model: str):
+def process_and_embed_documents(model: str, force_reingest: bool = False):
+    """
+    Ingère les documents pour un modèle donné, sauf si la collection existe déjà.
+    
+    Args:
+        model (str): L'ID du modèle d'embedding.
+        force_reingest (bool): Si True, supprime l'ancienne collection et ré-ingère tout.
+    """
+    
+    # =========================================================================
+    # ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼ DÉBUT DES AJOUTS ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
+    # =========================================================================
+    
+    # 1. Déterminer le nom de la collection et se connecter au client
+    collection_name = get_collection_name_from_model_id(model)
+    print(f"--- Vérification pour le modèle '{model}' (collection: '{collection_name}') ---")
+
+    try:
+        client = chromadb.PersistentClient(path=DB_DIR)
+    except Exception as e:
+        print(f"ERREUR: Impossible de se connecter au client ChromaDB à '{DB_DIR}'. Erreur: {e}")
+        return None
+
+    # 2. Vérifier si la collection existe déjà
+    existing_collections_names = [c.name for c in client.list_collections()]
+    
+    if collection_name in existing_collections_names:
+        if force_reingest:
+            print(f"Option 'force_reingest' activée. Suppression de la collection existante '{collection_name}'...")
+            client.delete_collection(name=collection_name)
+            print("Collection supprimée. L'ingestion va continuer.")
+        else:
+            collection = client.get_collection(name=collection_name)
+            count = collection.count()
+            print(f"INFO: La collection '{collection_name}' existe déjà et contient {count} documents.")
+            print("Aucune ingestion nécessaire. Pour forcer la ré-ingestion, utilisez l'option --force.")
+            return None # On s'arrête ici, car le travail est déjà fait
+
 
     loaded_documents = load_documents_main()
 
@@ -136,18 +174,12 @@ def process_and_embed_documents(model: str):
         print("Aucun document n'a été chargé. Arrêt.")
         return None
 
-    
-       # Si tu es sûr de ne vouloir AUCUN splitting pour AUCUN document :
     final_documents_to_embed = loaded_documents
     print(f"Nombre total de documents à embedder (sans splitting appliqué ici) : {len(final_documents_to_embed)}")
     
-    
     print("\nExemple de premiers documents à embedder :")
     for i, doc_to_embed in enumerate(final_documents_to_embed[:3]):
-        print(f"Document {i+1} (Source: {doc_to_embed.metadata.get('nom_fichier_source', doc_to_embed.metadata.get('source', 'N/A'))}):")
-        print(f"  Contenu: {doc_to_embed.page_content[:300]}...")
-        # Afficher toutes les métadonnées pour vérifier
-        print(f"  Métadonnées complètes: {doc_to_embed.metadata}")
+        # ... (votre code de log reste inchangé) ...
         print("—" * 50)
 
     if not final_documents_to_embed:
@@ -155,41 +187,52 @@ def process_and_embed_documents(model: str):
         return None
 
     print("Initialisation du modèle d'embedding...")
-
     embedding_model = get_embedding_model(model)
-    collection_name = get_collection_name_from_model_id(model)
+    # collection_name est déjà défini au début, plus besoin de le redéfinir ici
+    
+    # Vous pouvez supprimer ces prints car ils sont maintenant gérés au début
+    # print(f"Création de la collection '{collection_name}' dans le répertoire {DB_DIR}...")
+    # print(f"Connexion au client ChromaDB persistant dans le répertoire : {DB_DIR}")
+    # print(f"Création de la nouvelle collection '{collection_name}'...")
 
-    print(f"Création de la collection '{collection_name}' dans le répertoire {DB_DIR}...")
-    # --- NOUVELLE LOGIQUE D'INDEXATION ROBUSTE ---
-    print(f"Connexion au client ChromaDB persistant dans le répertoire : {DB_DIR}")
-
-# # Optionnel mais recommandé : Supprimer l'ancien répertoire pour un nouveau départ
-#     if os.path.exists(DB_DIR):
-#         print(f"Suppression de l'ancien répertoire de base de données : {DB_DIR}")
-#         shutil.rmtree(DB_DIR)
-
-    print(f"Création de la nouvelle collection '{collection_name}'...")
     # On ajoute les documents à CETTE collection spécifique
     vectorstore = Chroma.from_documents(
         documents=final_documents_to_embed,
         embedding=embedding_model,
         collection_name=collection_name,
-        persist_directory=DB_DIR  # Très important !
+        persist_directory=DB_DIR
     )
     count = vectorstore._collection.count()
 
     print(f"Base de données vectorielle créée/mise à jour avec {count} documents.")
     return vectorstore
 
+
+# =========================================================================
+# ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼ BLOC D'EXÉCUTION À CHANGER ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
+# =========================================================================
+
 if __name__ == "__main__":
-    # S'assurer que le répertoire de documents existe
+    # Importation nécessaire pour lire les arguments de la ligne de commande
+    import argparse
+    from pathlib import Path
+
+    # Création d'un "parser" pour gérer les arguments
+    parser = argparse.ArgumentParser(description="Script d'ingestion de documents pour ChromaDB.")
+    parser.add_argument("model", type=str, help="L'ID du modèle à utiliser pour l'ingestion (ex: 'snowflake-arctic-embed:latest').")
+    parser.add_argument("--force", action="store_true", help="Forcer la ré-ingestion même si la collection existe.")
+    
+    # Lecture des arguments passés en ligne de commande
+    args = parser.parse_args()
+    
+    # Votre code existant pour vérifier le répertoire des documents
     if not Path(DOCUMENTS_DIR).exists():
         print(f"ERREUR: Le répertoire de documents '{DOCUMENTS_DIR}' n'existe pas.")
     else:
-        # vs = process_and_embed_documents(model="dengcao/Qwen3-Embedding-4B:q5_K_M")
-        vs = process_and_embed_documents(model="snowflake-arctic-embed2:latest")  # Utilise le modèle Snowflake pour l'exemple
+        # On appelle la fonction avec les arguments lus
+        vs = process_and_embed_documents(model=args.model, force_reingest=args.force)
 
         if vs:
             print("Processus d'embedding terminé avec succès.")
         else:
-            print("Échec du processus d'embedding.")
+            print("Échec ou annulation du processus d'embedding.")

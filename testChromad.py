@@ -121,8 +121,8 @@ def clean_empty_collections():
 
 if __name__ == "__main__":
     # clean_empty_collections(path="chemin/vers/ta/db")
-    clean_empty_collections()
-    # list_all_collections_with_counts()
+    # clean_empty_collections()
+    list_all_collections_with_counts()
 
 
 def delete_collection_by_name(name: str):

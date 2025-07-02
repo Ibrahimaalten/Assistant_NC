@@ -1,6 +1,6 @@
 AVAILABLE_EMBEDDING_MODELS = {
     "qwen_base": "dengcao/Qwen3-Embedding-0.6B:f16",
-    "dengcao_qwen3_4b": "dengcao/Qwen3-Embedding-4B:Q5_K_M",
+    "dengcao_qwen3_4b": "dengcao/Qwen3-Embedding-4B:q5_K_M",
     "snowflake2": "snowflake-arctic-embed2:latest"
     # Ajoutez d'autres modèles que vous voulez tester ici
 }
