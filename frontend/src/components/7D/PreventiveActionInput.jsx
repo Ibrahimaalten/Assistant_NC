@@ -38,12 +38,15 @@ const PreventiveActionInput = ({ initialActionData, onSave, onCancel }) => {
       alert("La description, le responsable et l'état sont requis.");
       return;
     }
-    // ... (validation date inchangée) ...
     if (actionData.dateLancement && actionData.dateCloturePrevue && actionData.dateCloturePrevue < actionData.dateLancement) {
         alert("La date de clôture prévue ne peut pas être antérieure à la date de lancement.");
         return;
     }
-    onSave(actionData); // Sauvegarde l'objet complet, incluant l'état
+    let dataToSave = { ...actionData };
+    if (isEditing) {
+      dataToSave.id = initialActionData.id; // conserve l'id pour l'édition
+    }
+    onSave(dataToSave); // Sauvegarde l'objet complet, incluant l'état
   };
 
   const isEditing = !!initialActionData?.id;

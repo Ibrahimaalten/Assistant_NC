@@ -12,6 +12,9 @@ import Description2DInput from '../components/2D/Description2DInput'; // Assurez
 // Importer le hook du contexte
 import { useForm8D } from '../contexts/Form8DContext'; // Assurez-vous que le chemin est correct
 
+// Importer le composant MainButton pour la centralisation des boutons
+import MainButton from '../components/MainButton';
+
 // L'ordre des étapes doit être cohérent
 const stepsOrder = [
   'd0_initialisation',
@@ -153,34 +156,17 @@ function D2Form({ tabKeyLabel = "D2" }) { // tabKeyLabel est passé par App.jsx
           {apiStatus === 'error' && (
             <Typography color="error.main" sx={{ mb: 2 }}>Erreur lors de la sauvegarde. Veuillez réessayer.</Typography>
           )}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 4, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
-            <Button
-              variant="outlined"
-              startIcon={<NavigateBeforeIcon />}
-              onClick={handlePrevious}
-              disabled={currentIndex === 0}
-            >
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 4 }}>
+            <MainButton color="primary" onClick={handlePrevious} disabled={currentIndex === 0} startIcon={<NavigateBeforeIcon />} sx={{ minWidth: 120 }}>
               Précédent
-            </Button>
+            </MainButton>
             <Box>
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<SaveIcon />}
-                onClick={handleSave}
-                sx={{ mr: 1 }}
-              >
-                Sauvegarder {tabKeyLabel}
-              </Button>
-              <Button
-                variant="contained"
-                color="secondary"
-                endIcon={<NavigateNextIcon />}
-                onClick={handleNext}
-                disabled={currentIndex === stepsOrder.length - 1}
-              >
+              <MainButton color="primary" onClick={handleSave} startIcon={<SaveIcon />} sx={{ mr: 1, minWidth: 150 }}>
+                Sauvegarder {tabKeyLabel || 'D2'}
+              </MainButton>
+              <MainButton color="primary" onClick={handleNext} disabled={currentIndex === stepsOrder.length - 1} endIcon={<NavigateNextIcon />} sx={{ minWidth: 120 }}>
                 Suivant
-              </Button>
+              </MainButton>
             </Box>
           </Box>
         </Grid>

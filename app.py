@@ -9,6 +9,10 @@ import asyncio
 from backend.database import SessionLocal, engine
 from backend import models, schemas, crud
 from backend.query import query_documents_with_context
+from backend.utils import  build_sources
+from backend.retrieval import get_relevant_documents
+
+
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -86,6 +90,9 @@ class QueryContextPayload(BaseModel):
     form_data: Dict[str, Any] = Field(default_factory=dict)
     current_section_data: Dict[str, Any] = Field(default_factory=dict)
     current_section_name: Optional[str] = None
+    mode: Optional[str] = 'CHAT'  # Ajout du mode
+    model_key: Optional[str] = Field(None, description="La clé du modèle d'embedding à utiliser (ex: 'qwen_base', 'mxbai_large').")
+
 
 @app.post("/query_with_context")
 async def process_contextual_query(payload: QueryContextPayload):
@@ -93,14 +100,45 @@ async def process_contextual_query(payload: QueryContextPayload):
     form_data_8d = payload.form_data
     current_section_data_8d = payload.current_section_data
     current_section_name_8d = payload.current_section_name
+    mode = payload.mode or 'CHAT'
+    model_key = payload.model_key
+    print(f"DEBUG API: Clé de modèle reçue dans le payload = {model_key}")
+
+    if mode == 'REQ':
+        
+        docs = get_relevant_documents(
+            query_text=query_text,
+            current_section_data=current_section_data_8d,
+            current_section_name=current_section_name_8d,
+            form_data=form_data_8d,
+            model_key=model_key # <-- Assurez-vous que cet argument est bien passé !
+        )
+        # Formate les sources comme dans le RAG
+        sources = build_sources(docs, mode="REQ")
+        print("[DEBUG SOURCES RETRIEVAL] Nombre de sources récupérées:", len(sources))
+        
+        def simple_stream():
+            yield json.dumps({"sources": sources, "done": True}, ensure_ascii=False) + "\n"
+        return StreamingResponse(simple_stream(), media_type="application/jsonlines")
+    ####CHAT####
     async def stream_response():
         async for chunk in query_documents_with_context(
             query_text=query_text,
             form_data=form_data_8d,
             current_section_data=current_section_data_8d,
             current_section_name=current_section_name_8d,
-            stream=True
+            stream=True,
+            model_key=model_key, # <-- Passer le paramètre
+
         ):
+            if 'sources' in chunk:
+                print("[DEBUG SOURCES STREAM] Nombre de sources dans chunk:", len(chunk['sources']))
+                for idx, src in enumerate(chunk['sources']):
+                    print(f"  Source {idx+1}: NC ID: {src.get('nc_id', 'N/A')} | Fichier: {src.get('source_file', src.get('source', 'N/A'))} | Aperçu: {src.get('preview', src.get('content', 'N/A'))[:60]}")
+                    # Log complet des métadonnées du document source si possible
+                    if 'retrieved_docs' in chunk and idx < len(chunk['retrieved_docs']):
+                        print(f"    [META] Métadonnées complètes: {getattr(chunk['retrieved_docs'][idx], 'metadata', {})}")
+            
             yield json.dumps(chunk, ensure_ascii=False) + "\n"
     return StreamingResponse(stream_response(), media_type="application/jsonlines")
 

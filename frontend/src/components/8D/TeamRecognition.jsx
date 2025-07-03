@@ -22,6 +22,10 @@ const stringToColor = (string) => {
 };
 
 const stringAvatar = (name) => {
+  if (!name || typeof name !== 'string') return {
+    sx: { bgcolor: '#888', width: 32, height: 32, fontSize: '0.8rem' },
+    children: '?',
+  };
   const nameParts = name.split(' ');
   return {
     sx: {
@@ -60,19 +64,24 @@ const TeamRecognition = ({
                      <Typography variant="body2" gutterBottom>Membres de l'équipe contributeurs :</Typography>
                      {teamMembers.length > 0 ? (
                         <List dense>
-                            {teamMembers.map((member, index) => (
+                            {teamMembers.map((member, index) => {
+                              // Supporte string (nom/email) ou objet {name, email}
+                              const displayName = typeof member === 'string' ? member : member.name || member.email || '?';
+                              const displayEmail = typeof member === 'string' ? '' : member.email || '';
+                              return (
                                 <ListItem key={index} disablePadding sx={{mb: 0.5}}>
                                     <ListItemIcon sx={{minWidth: 'auto', mr: 1.5}}>
-                                        <Avatar {...stringAvatar(member.name)} />
+                                        <Avatar {...stringAvatar(displayName)} />
                                     </ListItemIcon>
                                     <ListItemText
-                                        primary={member.name}
-                                        secondary={member.email || 'Email non fourni'}
+                                        primary={displayName}
+                                        secondary={displayEmail || 'Email non fourni'}
                                         primaryTypographyProps={{ variant: 'body2', fontWeight: '500' }}
                                         secondaryTypographyProps={{ variant: 'caption' }}
                                     />
                                 </ListItem>
-                            ))}
+                              );
+                            })}
                         </List>
                      ) : (
                          <Typography variant="caption" color="textSecondary">Aucun membre d'équipe fourni.</Typography>

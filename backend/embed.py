@@ -1,12 +1,15 @@
 import os
 from langchain_community.document_loaders import DirectoryLoader, TextLoader, PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter # Tu en auras peut-être besoin pour les PDF/TXT
-from langchain_ollama.embeddings import OllamaEmbeddings
+from langchain_ollama import OllamaEmbeddings
 from langchain_community.vectorstores import Chroma # Langchain_community est l'import standard
 import pandas as pd
 from langchain_core.documents import Document
 from pathlib import Path
 import shutil # Pour supprimer l'ancien DB_DIR
+import re
+import chromadb
+
 
 # Configuration des chemins
 DOCUMENTS_DIR = "C:\\Users\\lrodembourg\\Documents\\Test_Langchain\\documents" # Assure-toi que c'est le bon
@@ -73,18 +76,31 @@ def load_csv_for_rag(file_path):
         docs.append(doc)
     return docs
 
+
+def get_embedding_model(model: str):
+        return OllamaEmbeddings(model=model)
+# def get_collection_name_from_model(model):
+#     # Simplifie et nettoie le nom du modèle pour l'utiliser comme nom de collection
+#     return model.replace("/", "_").replace(":", "_")
+def get_collection_name_from_model_id(model_id: str) -> str:
+    """Crée un nom de collection valide pour ChromaDB à partir de l'ID du modèle."""
+    # Remplace les caractères non autorisés par des underscores
+    safe_name = re.sub(r'[^a-zA-Z0-9_-]', '_', model_id)
+    # ChromaDB recommande des noms entre 3 et 63 caractères
+    return f"coll_{safe_name[:55]}"
 def load_documents_main():
+    """
+    Charge tous les documents (TXT, PDF, et un CSV spécifique) depuis le répertoire DOCUMENTS_DIR.
+    Le CSV est traité par une fonction personnalisée pour créer des documents riches.
+    """
     all_documents = []
 
-    # TXT et PDF (ceux-ci POURRAIENT bénéficier du splitting si tu les gardes)
-    # Si tu ne veux splitter aucun document, tu commenteras le splitter plus tard.
-    # Si tu veux splitter UNIQUEMENT PDF/TXT et pas CSV, il faudra une logique plus fine.
+    # --- TXT et PDF (inchangé) ---
     print("Chargement des fichiers TXT...")
     txt_loader = DirectoryLoader(DOCUMENTS_DIR, glob="**/*.txt", loader_cls=TextLoader, show_progress=True, use_multithreading=True)
     txt_loaded_docs = txt_loader.load()
     if txt_loaded_docs: all_documents.extend(txt_loaded_docs)
     print(f"Chargé {len(txt_loaded_docs)} documents TXT.")
-
 
     print("Chargement des fichiers PDF...")
     pdf_loader = DirectoryLoader(DOCUMENTS_DIR, glob="**/*.pdf", loader_cls=PyPDFLoader, show_progress=True, use_multithreading=True)
@@ -92,26 +108,65 @@ def load_documents_main():
     if pdf_loaded_docs: all_documents.extend(pdf_loaded_docs)
     print(f"Chargé {len(pdf_loaded_docs)} documents PDF.")
 
-
+    # --- SECTION CSV ADAPTÉE ---
+    # On cible directement le fichier CSV avec votre fonction personnalisée
     clean_csv_path = Path(DOCUMENTS_DIR) / "NC5_clean.csv"
+    
     if clean_csv_path.exists():
-        print(f"Chargement et traitement du CSV : {clean_csv_path.name}")
-        csv_docs = load_csv_for_rag(str(clean_csv_path)) # Chaque ligne est un Document
-        if csv_docs: all_documents.extend(csv_docs)
-        print(f"Chargé {len(csv_docs)} documents depuis le CSV (1 doc par ligne).")
-
+        print(f"Chargement direct du fichier CSV via la fonction personnalisée : {clean_csv_path.name}")
+        
+        # Appel direct à votre fonction load_csv_for_rag
+        csv_docs = load_csv_for_rag(str(clean_csv_path))
+        
+        if csv_docs: 
+            all_documents.extend(csv_docs)
+        
+        print(f"Chargé {len(csv_docs)} documents depuis le CSV (traitement personnalisé).")
     else:
-        print(f"AVERTISSEMENT: Le fichier {clean_csv_path} n'a pas été trouvé.")
+        print(f"AVERTISSEMENT: Le fichier CSV spécifique {clean_csv_path} n'a pas été trouvé.")
 
-    print(f"Total de {len(all_documents)} documents sources chargés avant toute décision de splitting.")
+    print(f"\nTotal de {len(all_documents)} documents sources chargés avant toute décision de splitting.")
     return all_documents
 
 
-def process_and_embed_documents():
-    if Path(DB_DIR).exists():
-        print(f"Suppression de l'ancienne base de données : {DB_DIR}")
-        shutil.rmtree(DB_DIR)
-    Path(DB_DIR).mkdir(parents=True, exist_ok=True)
+def process_and_embed_documents(model: str, force_reingest: bool = False):
+    """
+    Ingère les documents pour un modèle donné, sauf si la collection existe déjà.
+    
+    Args:
+        model (str): L'ID du modèle d'embedding.
+        force_reingest (bool): Si True, supprime l'ancienne collection et ré-ingère tout.
+    """
+    
+    # =========================================================================
+    # ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼ DÉBUT DES AJOUTS ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
+    # =========================================================================
+    
+    # 1. Déterminer le nom de la collection et se connecter au client
+    collection_name = get_collection_name_from_model_id(model)
+    print(f"--- Vérification pour le modèle '{model}' (collection: '{collection_name}') ---")
+
+    try:
+        client = chromadb.PersistentClient(path=DB_DIR)
+    except Exception as e:
+        print(f"ERREUR: Impossible de se connecter au client ChromaDB à '{DB_DIR}'. Erreur: {e}")
+        return None
+
+    # 2. Vérifier si la collection existe déjà
+    existing_collections_names = [c.name for c in client.list_collections()]
+    
+    if collection_name in existing_collections_names:
+        if force_reingest:
+            print(f"Option 'force_reingest' activée. Suppression de la collection existante '{collection_name}'...")
+            client.delete_collection(name=collection_name)
+            print("Collection supprimée. L'ingestion va continuer.")
+        else:
+            collection = client.get_collection(name=collection_name)
+            count = collection.count()
+            print(f"INFO: La collection '{collection_name}' existe déjà et contient {count} documents.")
+            print("Aucune ingestion nécessaire. Pour forcer la ré-ingestion, utilisez l'option --force.")
+            return None # On s'arrête ici, car le travail est déjà fait
+
 
     loaded_documents = load_documents_main()
 
@@ -119,47 +174,12 @@ def process_and_embed_documents():
         print("Aucun document n'a été chargé. Arrêt.")
         return None
 
-    # --- GESTION DU SPLITTING ---
-    # Si tu veux que les CSV ne soient JAMAIS splittés, mais que les PDF/TXT le soient
-    # tu devras séparer les listes et appliquer le splitter uniquement aux PDF/TXT.
-    # Pour l'instant, si on ne veut RIEN splitter, on utilise `final_documents_to_embed = loaded_documents`
-    # Si on veut splitter certains types :
-    
-    # documents_to_embed = loaded_documents # Par défaut, on prend tout tel quel
-    
-    # OPTIONNEL: Splitter uniquement les PDF et TXT si tu en as et qu'ils sont longs
-    # Pour cela, il faudrait identifier les documents CSV dans `loaded_documents`
-    # et ne pas les passer au splitter. C'est plus complexe.
-    #
-    # Approche simple : si la majorité sont des CSV que tu ne veux pas splitter,
-    # et que tes PDF/TXT ne sont pas trop longs, tu peux te passer du splitter.
-    # Si tes PDF/TXT SONT longs, il est MIEUX de les splitter.
-
-    # Pour l'objectif "chaque ligne du csv doit rester [un document entier]" :
-    # Nous n'allons pas appliquer le TextSplitter aux documents issus des CSV.
-    # Si tu as d'autres types de documents (PDF, TXT) qui sont longs,
-    # tu devrais les splitter séparément.
-    # Pour simplifier ici, on suppose que tu veux traiter tous les `loaded_documents`
-    # sans splitting, ou que les CSV sont la source principale et que les autres
-    # ne posent pas de problème de longueur.
-
-    # Si tu es sûr de ne vouloir AUCUN splitting pour AUCUN document :
     final_documents_to_embed = loaded_documents
     print(f"Nombre total de documents à embedder (sans splitting appliqué ici) : {len(final_documents_to_embed)}")
     
-    # Si tu voulais splitter PDF/TXT mais pas CSV (logique plus avancée non implémentée ici pour garder simple)
-    # text_splitter = RecursiveCharacterTextSplitter(...)
-    # pdf_txt_chunks = text_splitter.split_documents([doc for doc in loaded_documents if not doc.metadata.get("nom_fichier_source","").endswith(".csv")])
-    # csv_docs = [doc for doc in loaded_documents if doc.metadata.get("nom_fichier_source","").endswith(".csv")]
-    # final_documents_to_embed = csv_docs + pdf_txt_chunks
-
-
     print("\nExemple de premiers documents à embedder :")
     for i, doc_to_embed in enumerate(final_documents_to_embed[:3]):
-        print(f"Document {i+1} (Source: {doc_to_embed.metadata.get('nom_fichier_source', doc_to_embed.metadata.get('source', 'N/A'))}):")
-        print(f"  Contenu: {doc_to_embed.page_content[:300]}...")
-        # Afficher toutes les métadonnées pour vérifier
-        print(f"  Métadonnées complètes: {doc_to_embed.metadata}")
+        # ... (votre code de log reste inchangé) ...
         print("—" * 50)
 
     if not final_documents_to_embed:
@@ -167,33 +187,52 @@ def process_and_embed_documents():
         return None
 
     print("Initialisation du modèle d'embedding...")
-    embedding_model = OllamaEmbeddings(base_url=ollama_endpoint, model="snowflake-arctic-embed2")
+    embedding_model = get_embedding_model(model)
+    # collection_name est déjà défini au début, plus besoin de le redéfinir ici
+    
+    # Vous pouvez supprimer ces prints car ils sont maintenant gérés au début
+    # print(f"Création de la collection '{collection_name}' dans le répertoire {DB_DIR}...")
+    # print(f"Connexion au client ChromaDB persistant dans le répertoire : {DB_DIR}")
+    # print(f"Création de la nouvelle collection '{collection_name}'...")
 
-    print(f"Création de la base vectorielle Chroma dans {DB_DIR} avec la collection 'AssistancNCC'...")
+    # On ajoute les documents à CETTE collection spécifique
     vectorstore = Chroma.from_documents(
-        collection_name="AssistancNCC",
-        documents=final_documents_to_embed, # Utiliser ces documents
+        documents=final_documents_to_embed,
         embedding=embedding_model,
+        collection_name=collection_name,
         persist_directory=DB_DIR
     )
+    count = vectorstore._collection.count()
 
-    print(f"Base de données vectorielle créée/mise à jour avec {len(final_documents_to_embed)} documents.")
+    print(f"Base de données vectorielle créée/mise à jour avec {count} documents.")
     return vectorstore
 
+
+# =========================================================================
+# ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼ BLOC D'EXÉCUTION À CHANGER ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
+# =========================================================================
+
 if __name__ == "__main__":
-    # S'assurer que le répertoire de documents existe
+    # Importation nécessaire pour lire les arguments de la ligne de commande
+    import argparse
+    from pathlib import Path
+
+    # Création d'un "parser" pour gérer les arguments
+    parser = argparse.ArgumentParser(description="Script d'ingestion de documents pour ChromaDB.")
+    parser.add_argument("model", type=str, help="L'ID du modèle à utiliser pour l'ingestion (ex: 'snowflake-arctic-embed:latest').")
+    parser.add_argument("--force", action="store_true", help="Forcer la ré-ingestion même si la collection existe.")
+    
+    # Lecture des arguments passés en ligne de commande
+    args = parser.parse_args()
+    
+    # Votre code existant pour vérifier le répertoire des documents
     if not Path(DOCUMENTS_DIR).exists():
         print(f"ERREUR: Le répertoire de documents '{DOCUMENTS_DIR}' n'existe pas.")
     else:
-        vs = process_and_embed_documents()
+        # On appelle la fonction avec les arguments lus
+        vs = process_and_embed_documents(model=args.model, force_reingest=args.force)
+
         if vs:
             print("Processus d'embedding terminé avec succès.")
-            # Tu peux ajouter un test de recherche ici si tu veux
-            # test_query = "problème autocollant" # Adapte avec un terme de tes données
-            # results = vs.similarity_search(test_query, k=2)
-            # print(f"\nRésultats test pour '{test_query}':")
-            # for res_doc in results:
-            # print(f"  NC ID: {res_doc.metadata.get('id_non_conformite', 'N/A')}, Source: {res_doc.metadata.get('nom_fichier_source', 'N/A')}")
-            # print(f"  Contenu: {res_doc.page_content[:100]}...")
         else:
-            print("Échec du processus d'embedding.")
+            print("Échec ou annulation du processus d'embedding.")

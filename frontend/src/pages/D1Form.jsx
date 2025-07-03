@@ -17,6 +17,7 @@ import { useParams } from 'react-router-dom';
 import ChefEquipe from '../components/EquipeD1/ChefEquipe'; // Renommé pour correspondre au nom du fichier
 import GestionEquipe from '../components/EquipeD1/GestionEquipe';
 import { useForm8D } from '../contexts/Form8DContext'; // Ajustez le chemin si nécessaire
+import MainButton from '../components/MainButton';
 
 // L'ordre des étapes doit être cohérent avec tabDefinitions dans App.jsx
 // Il est préférable de le définir une seule fois et de l'importer si possible,
@@ -284,34 +285,17 @@ function D1Form({ tabKeyLabel = "D1" }) {
           {apiStatus === 'error' && (
             <Typography color="error.main" sx={{ mb: 2 }}>Erreur lors de la sauvegarde. Veuillez réessayer.</Typography>
           )}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 4, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
-            <Button
-              variant="outlined"
-              startIcon={<NavigateBeforeIcon />}
-              onClick={handlePrevious}
-              disabled={currentIndex === 0}
-            >
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 4 }}>
+            <MainButton color="primary" onClick={handlePrevious} disabled={currentIndex === 0} startIcon={<NavigateBeforeIcon />} sx={{ minWidth: 120 }}>
               Précédent
-            </Button>
+            </MainButton>
             <Box>
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<SaveIcon />}
-                onClick={handleSave}
-                sx={{ mr: 1 }}
-              >
-                Sauvegarder {tabKeyLabel}
-              </Button>
-              <Button
-                variant="contained"
-                color="secondary"
-                endIcon={<NavigateNextIcon />}
-                onClick={handleNext}
-                disabled={currentIndex === stepsOrder.length - 1}
-              >
+              <MainButton color="primary" onClick={handleSave} startIcon={<SaveIcon />} sx={{ mr: 1, minWidth: 150 }}>
+                Sauvegarder {tabKeyLabel || 'D1'}
+              </MainButton>
+              <MainButton color="primary" onClick={handleNext} disabled={currentIndex === stepsOrder.length - 1} endIcon={<NavigateNextIcon />} sx={{ minWidth: 120 }}>
                 Suivant
-              </Button>
+              </MainButton>
             </Box>
           </Box>
         </Grid>

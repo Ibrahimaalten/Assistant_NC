@@ -6,6 +6,8 @@ import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import SaveIcon from '@mui/icons-material/Save';
 import { useForm8D } from '../contexts/Form8DContext';
 import { useParams } from 'react-router-dom';
+import { COLORS } from '../colors';
+import MainButton from '../components/MainButton';
 
 // Importer le composant pour la liste des actions
 import ActionImplementationList from '../components/6D/ActionImplementationList';
@@ -23,62 +25,16 @@ const stepsOrder = [
     ];
 function D6Form({
   tabKeyLabel,
-  d5ActionsData = {},
   onSaveD6
 }) {
-  const { setCurrentStepKey, currentStepKey } = useForm8D();
+  const { setCurrentStepKey, currentStepKey, form8DData } = useForm8D();
   const currentIndex = stepsOrder.indexOf(currentStepKey);
   const { id } = useParams();
 
-  // --- DONNÉES D'EXEMPLE POUR LES ACTIONS D5 (utilisées si d5ActionsData est vide) ---
-  const sampleD5ActionsData = {
-    "Roulement X usé sur arbre principal": [ // Doit correspondre à une cause racine d'exemple de D5
-        { id: 'd5act-001', description: "Remplacer le roulement référence ABC-123", responsable: "Jean Dupont (Méca)", dateLancement: "2024-07-15", dateCloturePrevue: "2024-07-19", etat: "Terminée" },
-        { id: 'd5act-002', description: "Vérifier l'alignement de l'arbre après remplacement", responsable: "Jean Dupont (Méca)", dateLancement: "2024-07-19", dateCloturePrevue: "2024-07-19", etat: "Terminée" },
-        { id: 'd5act-003', description: "Mettre à jour plan de maintenance préventive (graissage)", responsable: "Service Méthodes", dateLancement: "2024-07-16", dateCloturePrevue: "2024-07-30", etat: "En cours" }
-    ],
-    "Procédure pas à jour (rév B manquante)": [ // Autre cause racine d'exemple
-        { id: 'd5act-004', description: "Rédiger la procédure rév B incluant étape pré-chauffe", responsable: "Alice Martin (Qualité)", dateLancement: "2024-07-20", dateCloturePrevue: "2024-08-05", etat: "A définir" },
-        { id: 'd5act-005', description: "Former les opérateurs à la nouvelle procédure rév B", responsable: "Chef d'équipe Prod", dateLancement: "2024-08-06", dateCloturePrevue: "2024-08-15", etat: "A définir" }
-    ],
-    "Poste de travail non ergonomique": [ // Autre cause racine d'exemple
-        { id: 'd5act-006', description: "Réaliser audit ergonomique flash", responsable: "Ergonome Conseil", dateLancement: "2024-07-25", dateCloturePrevue: "2024-07-28", etat: "En cours" }
-    ]
-    // "Joint porte section C défectueux": [] // Cause racine sans actions définies
-};
-  // --- Fonction d'initialisation pour l'état ---
-  // Sera exécutée une seule fois par React lors du montage initial
-  const initializeD6State = (initialD5Data) => {
-    console.log("Initializing D6 state from D5 data..."); // Pour débugger
-    const state = {};
-    // Vérifie si initialD5Data est bien un objet avant d'itérer
-    if (initialD5Data && typeof initialD5Data === 'object') {
-      Object.entries(initialD5Data).forEach(([rootCause, actions]) => {
-        // Vérifie si actions est bien un tableau
-        if (Array.isArray(actions)) {
-            state[rootCause] = actions.map(action => ({
-                ...action, // Garde les infos de D5
-                // Ajoute/initialise les champs spécifiques à D6
-                dateImplementationReelle: action.dateImplementationReelle || '',
-                dateClotureReelle: action.dateClotureReelle || '',
-                // Important: Utilise un état initial clair pour D6
-                etatImplementation: action.etatImplementation || action.etat || 'A définir',
-                preuvesLien: action.preuvesLien || '',
-            }));
-        } else {
-            console.warn(`Actions for root cause "${rootCause}" is not an array:`, actions);
-            state[rootCause] = []; // Initialise avec un tableau vide si les données sont incorrectes
-        }
-      });
-    }
-    return state;
-  };
-   // --- MODIFIÉ : Déterminer la source de données avant d'initialiser l'état ---
-   const hasRealD5Data = d5ActionsData && Object.keys(d5ActionsData).length > 0;
-   const initialDataForState = hasRealD5Data ? d5ActionsData : sampleD5ActionsData;
-   if (!hasRealD5Data) {
-       console.log("D6Form using SAMPLE D5 actions data for initialization."); // Log pour débug
-   }
+  // --- Utilise les vraies actions D5 du contexte ---
+  const d5ActionsData = form8DData?.d5_correctiveactions?.correctiveActionsData || {};
+  const hasRealD5Data = d5ActionsData && Object.keys(d5ActionsData).length > 0;
+  const initialDataForState = hasRealD5Data ? d5ActionsData : {};
 
   // --- État pour les actions initialisé UNE SEULE FOIS avec les données D5 ---
   const [implementedActions, setImplementedActions] = useState(() => initializeD6State(initialDataForState));
@@ -172,12 +128,12 @@ function D6Form({
 
   // --- Rendu (inchangé) ---
   return (
-    <Box component="div" sx={{ p: 2, maxWidth: 900, margin: '0 auto' }}>
-      <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
+    <Box component="div" sx={{ p: 2, maxWidth: 900, margin: '0 auto', background: COLORS.background, borderRadius: 4, boxShadow: '0 4px 24px 0 rgba(35,57,93,0.10)', border: `1.5px solid ${COLORS.primaryDark}20` }}>
+      <Typography variant="h6" gutterBottom sx={{ mb: 2, color: COLORS.white, fontWeight: 700, letterSpacing: 1, background: COLORS.primaryDark, padding: '1rem 2rem', borderRadius: 2, boxShadow: '0 2px 8px rgba(35,57,93,0.08)', textAlign: 'center' }}>
         D6 – Vérification de l’Efficacité des Actions Correctives
       </Typography>
-      <Paper elevation={2} sx={{ p: 2, mb: 3 }}>
-        <Typography variant="subtitle1" sx={{ mb: 1 }}>
+      <Paper elevation={2} sx={{ p: 2, mb: 3, background: COLORS.white, borderRadius: 3, boxShadow: '0 2px 8px #e3eafc' }}>
+        <Typography variant="subtitle1" sx={{ mb: 1, color: COLORS.primaryDark, fontWeight: 600 }}>
           Vérification de l’efficacité des actions correctives
         </Typography>
         <ActionImplementationList actionsByRootCause={implementedActions} onActionUpdate={handleActionUpdate} />
@@ -190,22 +146,43 @@ function D6Form({
       </Snackbar>
       {/* Barre de navigation et sauvegarde */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 3 }}>
-        <Button variant="outlined" startIcon={<NavigateBeforeIcon />} onClick={handlePrevious} disabled={currentIndex === 0}>
+        <MainButton color="primary" onClick={handlePrevious} disabled={currentIndex === 0} startIcon={<NavigateBeforeIcon />} sx={{ minWidth: 120 }}>
           Précédent
-        </Button>
+        </MainButton>
         <Box>
-          <Button variant="contained" color="primary" startIcon={<SaveIcon />} onClick={handleSave} sx={{ mr: 1 }}>
+          <MainButton color="primary" onClick={handleSave} startIcon={<SaveIcon />} sx={{ mr: 1, minWidth: 150 }}>
             Sauvegarder {tabKeyLabel}
-          </Button>
-          <Button variant="contained" endIcon={<NavigateNextIcon />} onClick={handleNext} disabled={currentIndex === stepsOrder.length - 1}>
+          </MainButton>
+          <MainButton color="primary" onClick={handleNext} disabled={currentIndex === stepsOrder.length - 1} endIcon={<NavigateNextIcon />} sx={{ minWidth: 120 }}>
             Suivant
-          </Button>
+          </MainButton>
         </Box>
       </Box>
       {/* Préparation pour ChatAssistant (décommenter pour intégrer) */}
       {/* <Box sx={{ mt: 4 }}><ChatAssistant /></Box> */}
     </Box>
   );
+}
+
+// Initialise l'état D6 à partir des actions D5
+function initializeD6State(initialD5Data) {
+  const state = {};
+  if (initialD5Data && typeof initialD5Data === 'object') {
+    Object.entries(initialD5Data).forEach(([rootCause, actions]) => {
+      if (Array.isArray(actions)) {
+        state[rootCause] = actions.map(action => ({
+          ...action,
+          dateImplementationReelle: action.dateImplementationReelle || '',
+          dateClotureReelle: action.dateClotureReelle || '',
+          etatImplementation: action.etatImplementation || action.etat || 'A définir',
+          preuvesLien: action.preuvesLien || '',
+        }));
+      } else {
+        state[rootCause] = [];
+      }
+    });
+  }
+  return state;
 }
 
 export default D6Form;
