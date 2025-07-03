@@ -4,12 +4,16 @@ import { Box, Button, Typography, Grid } from '@mui/material'; // TextField n'es
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import SaveIcon from '@mui/icons-material/Save';
+import { useParams } from 'react-router-dom';
 
 // Importer le sous-composant pour la description
 import Description2DInput from '../components/2D/Description2DInput'; // Assurez-vous que le chemin est correct
 
 // Importer le hook du contexte
 import { useForm8D } from '../contexts/Form8DContext'; // Assurez-vous que le chemin est correct
+
+// Importer le composant MainButton pour la centralisation des boutons
+import MainButton from '../components/MainButton';
 
 // L'ordre des étapes doit être cohérent
 const stepsOrder = [
@@ -52,6 +56,10 @@ function D2Form({ tabKeyLabel = "D2" }) { // tabKeyLabel est passé par App.jsx
   // État local pour les erreurs de validation de cette page
   const [localErrors, setLocalErrors] = useState({});
 
+  // --- Gestionnaire de Sauvegarde vers l'API ---
+  const [apiStatus, setApiStatus] = useState(null); // Pour feedback utilisateur
+  const { id } = useParams();
+
   // Gestionnaire pour Description2DInput
   // newDescriptionObject est l'objet complet {qui, quoi, ou...} renvoyé par Description2DInput
   const handleDescriptionChange = (newDescriptionObject) => {
@@ -77,13 +85,29 @@ function D2Form({ tabKeyLabel = "D2" }) { // tabKeyLabel est passé par App.jsx
     return Object.keys(tempErrors).length === 0;
   };
 
-  const handleSave = () => {
-    if (validatePage()) {
-      console.log(`Données ${tabKeyLabel} validées (issues du contexte):`, sectionData);
-      alert(`Données ${tabKeyLabel} prêtes pour la sauvegarde (simulation) !`);
-    } else {
-      console.log(`Validation ${tabKeyLabel} échouée`, localErrors);
+  const handleSubmitToAPI = async () => {
+    if (!validatePage()) return;
+    setApiStatus(null);
+    try {
+      const method = id ? 'PUT' : 'POST';
+      const url = id ? `/api/nonconformites/${id}` : '/api/nonconformites';
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form8DData),
+      });
+      if (response.ok) {
+        setApiStatus('success');
+      } else {
+        setApiStatus('error');
+      }
+    } catch (error) {
+      setApiStatus('error');
     }
+  };
+
+  const handleSave = () => {
+    handleSubmitToAPI();
   };
 
   const currentIndex = stepsOrder.indexOf(currentStepKey);
@@ -125,34 +149,24 @@ function D2Form({ tabKeyLabel = "D2" }) { // tabKeyLabel est passé par App.jsx
 
         {/* --- Zone des Boutons --- */}
         <Grid item xs={12}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 4, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
-            <Button
-              variant="outlined"
-              startIcon={<NavigateBeforeIcon />}
-              onClick={handlePrevious}
-              disabled={currentIndex === 0}
-            >
+          {/* Feedback utilisateur API */}
+          {apiStatus === 'success' && (
+            <Typography color="success.main" sx={{ mb: 2 }}>Sauvegarde réussie !</Typography>
+          )}
+          {apiStatus === 'error' && (
+            <Typography color="error.main" sx={{ mb: 2 }}>Erreur lors de la sauvegarde. Veuillez réessayer.</Typography>
+          )}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 4 }}>
+            <MainButton color="primary" onClick={handlePrevious} disabled={currentIndex === 0} startIcon={<NavigateBeforeIcon />} sx={{ minWidth: 120 }}>
               Précédent
-            </Button>
+            </MainButton>
             <Box>
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<SaveIcon />}
-                onClick={handleSave}
-                sx={{ mr: 1 }}
-              >
-                Sauvegarder {tabKeyLabel}
-              </Button>
-              <Button
-                variant="contained"
-                color="secondary"
-                endIcon={<NavigateNextIcon />}
-                onClick={handleNext}
-                disabled={currentIndex === stepsOrder.length - 1}
-              >
+              <MainButton color="primary" onClick={handleSave} startIcon={<SaveIcon />} sx={{ mr: 1, minWidth: 150 }}>
+                Sauvegarder {tabKeyLabel || 'D2'}
+              </MainButton>
+              <MainButton color="primary" onClick={handleNext} disabled={currentIndex === stepsOrder.length - 1} endIcon={<NavigateNextIcon />} sx={{ minWidth: 120 }}>
                 Suivant
-              </Button>
+              </MainButton>
             </Box>
           </Box>
         </Grid>
