@@ -5,7 +5,6 @@ from .embed import get_embedding_model, get_collection_name_from_model_id
 from config import get_model_id
 DB_DIR = "C:/Users/lrodembourg/Documents/Test_Langchain/chroma_db" # Assurez-vous que c'est le bon chemin si vous utilisez persist_directory
 
-
 # --- NOUVEAU : Initialisation du client persistant au niveau du module ---
 # C'est la meilleure pratique. Le client est créé une seule fois et sait où trouver la base de données.
 try:

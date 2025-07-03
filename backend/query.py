@@ -9,7 +9,8 @@ from backend.retrieval import get_relevant_documents
 from backend.ollama_thinking import ChatOllamaWithThinking
 
 # Configuration
-DB_DIR = "C:/Users/lrodembourg/Documents/Test_Langchain/chroma_db"
+# DB_DIR = "C:/Users/lrodembourg/Documents/Test_Langchain/chroma_db"
+DB_DIR = "C:/Users/isene/MyWorspace\Assistant_NC/documents/Test_Langchain/chroma_db"
 ollama_endpoint = "http://localhost:11434"
 
 def query_documents(query_text, ):
