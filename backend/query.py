@@ -6,6 +6,7 @@ from backend.utils import  build_sources
 from backend.routeur import detect_prompt
 from backend.get_vector_db import get_vectorstore
 from backend.retrieval import get_relevant_documents
+from backend.ollama_thinking import ChatOllamaWithThinking
 
 # Configuration
 DB_DIR = "C:/Users/lrodembourg/Documents/Test_Langchain/chroma_db"
@@ -96,8 +97,17 @@ async def query_documents_with_context(query_text: str, form_data: dict, current
         context_to_pass_to_llm = [Document(page_content="Information contextuelle non disponible.")]
 
     # 5. Préparation chaîne LLM
-    llm = ChatOllama(model="qwen3:14b", num_ctx=16384, temperature=0.7, base_url=ollama_endpoint, top_k=20, top_p=0.80, thinking_mode=False)
+    # llm = ChatOllama(model="qwen3:14b", num_ctx=16384, temperature=0.7, base_url=ollama_endpoint, top_k=20, top_p=0.80)
     #Thinking mode:
+    llm = ChatOllamaWithThinking(
+    model="qwen3:14b",
+    num_ctx=16384,
+    temperature=0.7,
+    base_url=ollama_endpoint,
+    top_k=20,
+    top_p=0.95,
+    thinking_mode=True  # ou False
+)
     # llm = ChatOllama(model="qwen3:14b", num_ctx=16384, temperature=0.7, base_url=ollama_endpoint, top_k=20, top_p=0.95, thinking_mode=True)
 
     selected_prompt = detect_prompt(query_text, step=current_section_name if 'step' in detect_prompt.__code__.co_varnames else None)
