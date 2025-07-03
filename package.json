@@ -4,6 +4,7 @@
     "@emotion/styled": "^11.14.0",
     "@mui/icons-material": "^7.1.1",
     "@mui/material": "^7.1.1",
+    "html-react-parser": "^5.2.5",
     "react-markdown": "^10.1.0"
   }
 }
