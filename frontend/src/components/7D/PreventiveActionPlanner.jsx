@@ -15,6 +15,8 @@ const PreventiveActionPlanner = ({
 }) => {
 
   const [showAddForm, setShowAddForm] = useState(false);
+  // Ajout d'un mode édition d'action préventive
+  const [editingAction, setEditingAction] = useState(null);
 
   // Gérer l'ajout d'une nouvelle action
   const handleSaveNewAction = useCallback((actionDataFromForm) => {
@@ -22,9 +24,24 @@ const PreventiveActionPlanner = ({
     setShowAddForm(false); // Cache le formulaire après ajout
   }, [rootCauseText, onActionAdd]);
 
-  // Annuler l'ajout
+  // Gérer l'édition d'une action existante
+  const handleEditClick = useCallback((action) => {
+    setEditingAction(action);
+    setShowAddForm(true);
+  }, []);
+
+  // Sauvegarde d'une action (ajout ou édition)
+  const handleSaveAction = useCallback((actionDataFromForm) => {
+    // Ajout ou édition : on passe toujours par onActionAdd, qui gère l'id côté parent
+    onActionAdd(rootCauseText, actionDataFromForm);
+    setEditingAction(null);
+    setShowAddForm(false);
+  }, [onActionAdd, rootCauseText]);
+
+  // Annuler l'ajout ou l'édition
   const handleCancelAdd = useCallback(() => {
     setShowAddForm(false);
+    setEditingAction(null);
   }, []);
 
   // Gérer la suppression
@@ -43,9 +60,14 @@ const PreventiveActionPlanner = ({
         {actions.length > 0 ? (
             <List dense>
                 {actions.map(action => (
-                    <Paper key={action.id} elevation={1} sx={{ mb: 1, p: 1, borderLeft: '3px solid', borderColor: action.etat === 'Terminée' ? 'success.light' : 'secondary.light' }}> {/* Style basé sur état */}
-                         <ListItem /* ... */
-                            secondaryAction={ <IconButton /* ... */ onClick={() => handleDeleteClick(action.id)}><DeleteIcon/></IconButton> }
+                    <Paper key={action.id} elevation={1} sx={{ mb: 1, p: 1, borderLeft: '3px solid', borderColor: action.etat === 'Résolue' ? 'success.light' : 'secondary.light' }}>
+                         <ListItem
+                            secondaryAction={
+                              <>
+                                <IconButton onClick={() => handleEditClick(action)} color="primary" title="Modifier"><span className="material-icons">edit</span></IconButton>
+                                <IconButton onClick={() => handleDeleteClick(action.id)} color="error" title="Supprimer"><DeleteIcon/></IconButton>
+                              </>
+                            }
                          >
                             <ListItemText
                                 primary={action.description}
@@ -66,9 +88,9 @@ const PreventiveActionPlanner = ({
         {/* Formulaire d'ajout (conditionnel) */}
         {showAddForm && (
             <PreventiveActionInput
-                onSave={handleSaveNewAction}
+                onSave={handleSaveAction}
                 onCancel={handleCancelAdd}
-                // initialActionData={undefined} // Mode ajout explicite
+                initialActionData={editingAction}
             />
         )}
 

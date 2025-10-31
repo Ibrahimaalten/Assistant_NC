@@ -11,11 +11,13 @@ import CardActions from '@mui/material/CardActions';
 import IconButton from '@mui/material/IconButton';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import { useParams } from 'react-router-dom';
 
 // Assurez-vous que les chemins d'importation sont corrects
 import ChefEquipe from '../components/EquipeD1/ChefEquipe'; // Renommé pour correspondre au nom du fichier
 import GestionEquipe from '../components/EquipeD1/GestionEquipe';
 import { useForm8D } from '../contexts/Form8DContext'; // Ajustez le chemin si nécessaire
+import MainButton from '../components/MainButton';
 
 // L'ordre des étapes doit être cohérent avec tabDefinitions dans App.jsx
 // Il est préférable de le définir une seule fois et de l'importer si possible,
@@ -39,6 +41,7 @@ function D1Form({ tabKeyLabel = "D1" }) {
     setCurrentStepKey,
     currentStepKey,
   } = useForm8D();
+  const { id } = useParams();
 
   const SECTION_KEY = 'd1_team';
   const sectionData = form8DData[SECTION_KEY] || {
@@ -51,6 +54,8 @@ function D1Form({ tabKeyLabel = "D1" }) {
   const [localErrors, setLocalErrors] = useState({});
   const [editChef, setEditChef] = useState(!chefEquipeValue.prenom && !chefEquipeValue.nom);
   const [editSponsor, setEditSponsor] = useState(!sectionData.Sponsor);
+  // --- Gestionnaire de Sauvegarde vers l'API ---
+  const [apiStatus, setApiStatus] = useState(null); // Pour feedback utilisateur
 
   // Gestionnaire pour ChefEquipe
   const handleChefEquipeChange = (newChefEquipeObject) => {
@@ -98,17 +103,46 @@ function D1Form({ tabKeyLabel = "D1" }) {
     return Object.keys(tempErrors).length === 0;
   };
 
-  const handleSave = () => {
-    if (validatePage()) {
-      console.log(`Données ${tabKeyLabel} validées (issues du contexte):`, sectionData);
-      // Ici, vous pourriez envisager une logique de sauvegarde plus globale
-      // ou un appel API spécifique si chaque étape peut être sauvegardée individuellement.
-      alert(`Données ${tabKeyLabel} prêtes pour la sauvegarde (simulation) !`);
-    } else {
-      console.log(`Validation ${tabKeyLabel} échouée`, localErrors);
-      // Il serait préférable d'afficher les erreurs à l'utilisateur plutôt qu'une alerte générique.
-      // Les helperText des champs devraient déjà le faire.
+  // --- Soumission des données à l'API ---
+  const handleSubmitToAPI = async () => {
+    if (!validatePage()) return;
+    setApiStatus(null);
+    const cleanedForm8DData = {
+      ...form8DData,
+      d1_team: {
+        chefEquipe: {
+          prenom: sectionData.chefEquipe?.prenom || '',
+          nom: sectionData.chefEquipe?.nom || '',
+          support: sectionData.chefEquipe?.support || ''
+        },
+        membresEquipe: (sectionData.membresEquipe || []).map(m => ({
+          prenom: m.prenom || '',
+          nom: m.nom || '',
+          fonction: m.fonction || ''
+        })),
+        Sponsor: sectionData.Sponsor || ''
+      }
+    };
+    try {
+      const method = id ? 'PUT' : 'POST';
+      const url = id ? `/api/nonconformites/${id}` : '/api/nonconformites';
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cleanedForm8DData),
+      });
+      if (response.ok) {
+        setApiStatus('success');
+      } else {
+        setApiStatus('error');
+      }
+    } catch (error) {
+      setApiStatus('error');
     }
+  };
+
+  const handleSave = () => {
+    handleSubmitToAPI();
   };
 
   const currentIndex = stepsOrder.indexOf(currentStepKey);
@@ -244,34 +278,24 @@ function D1Form({ tabKeyLabel = "D1" }) {
 
         {/* --- Zone des Boutons --- */}
         <Grid item xs={12}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 4, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
-            <Button
-              variant="outlined"
-              startIcon={<NavigateBeforeIcon />}
-              onClick={handlePrevious}
-              disabled={currentIndex === 0}
-            >
+          {/* Feedback utilisateur API */}
+          {apiStatus === 'success' && (
+            <Typography color="success.main" sx={{ mb: 2 }}>Sauvegarde réussie !</Typography>
+          )}
+          {apiStatus === 'error' && (
+            <Typography color="error.main" sx={{ mb: 2 }}>Erreur lors de la sauvegarde. Veuillez réessayer.</Typography>
+          )}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 4 }}>
+            <MainButton color="primary" onClick={handlePrevious} disabled={currentIndex === 0} startIcon={<NavigateBeforeIcon />} sx={{ minWidth: 120 }}>
               Précédent
-            </Button>
+            </MainButton>
             <Box>
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<SaveIcon />}
-                onClick={handleSave}
-                sx={{ mr: 1 }}
-              >
-                Sauvegarder {tabKeyLabel} {/* Ou juste "Sauvegarder" */}
-              </Button>
-              <Button
-                variant="contained"
-                color="secondary" // Peut-être une autre couleur pour distinguer de la sauvegarde
-                endIcon={<NavigateNextIcon />}
-                onClick={handleNext}
-                disabled={currentIndex === stepsOrder.length - 1}
-              >
+              <MainButton color="primary" onClick={handleSave} startIcon={<SaveIcon />} sx={{ mr: 1, minWidth: 150 }}>
+                Sauvegarder {tabKeyLabel || 'D1'}
+              </MainButton>
+              <MainButton color="primary" onClick={handleNext} disabled={currentIndex === stepsOrder.length - 1} endIcon={<NavigateNextIcon />} sx={{ minWidth: 120 }}>
                 Suivant
-              </Button>
+              </MainButton>
             </Box>
           </Box>
         </Grid>

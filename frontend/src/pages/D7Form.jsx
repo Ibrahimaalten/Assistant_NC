@@ -5,10 +5,12 @@ import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import SaveIcon from '@mui/icons-material/Save';
 import { useForm8D } from '../contexts/Form8DContext';
+import { useParams } from 'react-router-dom';
 
 // Importer les sous-composants 7D
 import RootCausePreventSelector from '../components/7D/RootCausePreventSelector';
 import PreventiveActionPlanner from '../components/7D/PreventiveActionPlanner';
+import MainButton from '../components/MainButton';
 
 // --- Props Attendues ---
 // activeTabIndex, totalTabs, onNavigate, tabKeyLabel: Navigation
@@ -28,21 +30,21 @@ const stepsOrder = [
     ];
 function D7Form({
   tabKeyLabel,
-  identifiedRootCauses: rootCausesFromProps = [],
   onSaveD7
 }) {
-  const { setCurrentStepKey, currentStepKey } = useForm8D();
+  const { setCurrentStepKey, currentStepKey, form8DData, updateSectionData } = useForm8D();
+  const { id } = useParams();
 
-  // --- DONNÉES D'EXEMPLE POUR TEST ---
-  const sampleRootCausesForTesting = [
-    "Roulement X usé sur arbre principal",
-    "Procédure pas à jour (rév B manquante)",
-    "Poste de travail non ergonomique",
-    "Joint porte section C défectueux"
-  ];
-  // Utilise les props si disponibles, sinon l'exemple
-  const availableRootCauses = rootCausesFromProps.length > 0 ? rootCausesFromProps : sampleRootCausesForTesting;
-  // -----------------------------------
+  // Causes racines réelles issues du D4 (fiveWhysData)
+  const d4Section = form8DData['d4_rootcause'] || {};
+  const identifiedRootCauses = React.useMemo(() => {
+    return Object.values(d4Section.fiveWhysData || {})
+      .map(entry => entry?.rootCause?.trim())
+      .filter(Boolean);
+  }, [d4Section]);
+
+  // Utilise les causes racines réelles, pas d'exemple
+  const availableRootCauses = identifiedRootCauses;
 
   // État pour les causes racines sélectionnées pour la prévention (tableau de strings)
   const [selectedPreventiveCauses, setSelectedPreventiveCauses] = useState([]);
@@ -59,24 +61,14 @@ function D7Form({
 
   // --- Initialiser/Tester avec une sélection et une action ---
   useEffect(() => {
-    if (availableRootCauses.length > 0 && selectedPreventiveCauses.length === 0) {
-        const firstCause = availableRootCauses[0];
-        setSelectedPreventiveCauses([firstCause]);
-        setPreventiveActions({
-            [firstCause]: [
-                {
-                    id: 'prev-act-sample-001',
-                    description: 'Exemple: Mettre à jour la spécification matériau XYZ',
-                    responsable: 'Ingénierie',
-                    dateLancement: '2024-08-01',
-                    dateCloturePrevue: '2024-08-15',
-                    etat: 'A définir' // <-- AJOUT de l'état à l'exemple
-                }
-            ]
-        });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Le tableau vide assure l'exécution unique au montage
+    // Initialisation à partir du contexte Form8D, une seule fois au montage
+    const d7 = form8DData.d7_preventrecurrence || {};
+    setSelectedPreventiveCauses(Array.isArray(d7.selectedPreventiveCauses) ? d7.selectedPreventiveCauses : []);
+    setPreventiveActions(d7.preventiveActions || {});
+    setDocumentationUpdates(d7.documentationUpdates || '');
+    setSystemicChanges(d7.systemicChanges || '');
+    // eslint-disable-next-line
+  }, []); // <--- tableau vide : ne s'exécute qu'une fois
 
   // --- Handler pour la sélection/désélection des causes racines ---
   const handleCauseSelectionChange = useCallback((cause, isSelected) => {
@@ -105,6 +97,23 @@ function D7Form({
       }));
   }, []);
 
+  // Handler pour ajouter ou éditer une action préventive (à utiliser partout)
+  const handleAddOrEditPreventiveAction = useCallback((rootCause, actionData) => {
+    setPreventiveActions(prevActions => {
+      const actionsForCause = prevActions[rootCause] || [];
+      if (actionData.id) {
+        // Edition : remplace l'action existante
+        const updated = actionsForCause.map(act =>
+          act.id === actionData.id ? { ...act, ...actionData } : act
+        );
+        return { ...prevActions, [rootCause]: updated };
+      } else {
+        // Ajout classique
+        return { ...prevActions, [rootCause]: [...actionsForCause, { ...actionData, id: `prev-${Date.now()}-${Math.random().toString(16).slice(2)}` }] };
+      }
+    });
+  }, []);
+
   // --- Handler pour supprimer une action préventive ---
   const handleDeletePreventiveAction = useCallback((rootCause, actionId) => {
        setPreventiveActions(prevActions => {
@@ -127,11 +136,32 @@ function D7Form({
     if (name === 'systemicChanges') setSystemicChanges(value);
   };
 
-  // --- Sauvegarde D7 ---
+  // --- Gestionnaire de Sauvegarde vers l'API ---
+  const [apiStatus, setApiStatus] = useState(null); // Pour feedback utilisateur
+
+  const handleSubmitToAPI = async () => {
+    // Ajoutez ici la validation si besoin
+    setApiStatus(null);
+    try {
+      const method = id ? 'PUT' : 'POST';
+      const url = id ? `/api/nonconformites/${id}` : '/api/nonconformites';
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form8DData),
+      });
+      if (response.ok) {
+        setApiStatus('success');
+      } else {
+        setApiStatus('error');
+      }
+    } catch (error) {
+      setApiStatus('error');
+    }
+  };
+
   const handleSave = () => {
-    // TODO: Ajoutez ici la logique de validation si besoin
-    setSaveFeedback({ open: true, message: `Données ${tabKeyLabel} sauvegardées !`, severity: 'success' });
-    // ...sauvegarde réelle à implémenter...
+    handleSubmitToAPI();
   };
 
   const handleCloseSnackbar = () => setSaveFeedback(prev => ({ ...prev, open: false }));
@@ -152,6 +182,23 @@ function D7Form({
       window.scrollTo(0, 0);
     }
   };
+
+  // --- Synchronisation des actions préventives et causes sélectionnées avec le contexte Form8D ---
+  useEffect(() => {
+    updateSectionData('d7_preventrecurrence', {
+      selectedPreventiveCauses,
+      preventiveActions,
+      documentationUpdates,
+      systemicChanges
+    });
+    // DEBUG : log pour vérifier la synchro
+    console.log('[D7Form] Sync vers contexte d7_preventrecurrence', {
+      selectedPreventiveCauses,
+      preventiveActions,
+      documentationUpdates,
+      systemicChanges
+    });
+  }, [selectedPreventiveCauses, preventiveActions, documentationUpdates, systemicChanges, updateSectionData]);
 
   // --- Rendu ---
   return (
@@ -182,10 +229,10 @@ function D7Form({
           ) : (
               selectedPreventiveCauses.map(cause => (
                   <PreventiveActionPlanner
-                      key={cause} // Important pour React
+                      key={cause}
                       rootCauseText={cause}
-                      actions={preventiveActions[cause] || []} // Passe les actions pour cette cause
-                      onActionAdd={handleAddPreventiveAction}
+                      actions={preventiveActions[cause] || []}
+                      onActionAdd={handleAddOrEditPreventiveAction}
                       onActionDelete={handleDeletePreventiveAction}
                   />
               ))
@@ -218,25 +265,25 @@ function D7Form({
 
       {/* --- Zone des Boutons --- */}
       <Grid item xs={12}>
-         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 3 }}>
-            <Button variant="outlined" startIcon={<NavigateBeforeIcon />} onClick={handlePrevious} disabled={currentIndex === 0}>
+         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 4 }}>
+            <MainButton color="primary" onClick={handlePrevious} disabled={currentIndex === 0} startIcon={<NavigateBeforeIcon />} sx={{ minWidth: 120 }}>
               Précédent
-            </Button>
-             <Box>
-                <Button variant="contained" color="primary" startIcon={<SaveIcon />} onClick={handleSave} sx={{ mr: 1 }}>
-                  Sauvegarder {tabKeyLabel}
-                </Button>
-                <Button variant="contained" endIcon={<NavigateNextIcon />} onClick={handleNext} disabled={currentIndex === stepsOrder.length - 1}>
-                   Suivant
-                </Button>
+            </MainButton>
+            <Box>
+              <MainButton color="primary" onClick={handleSave} startIcon={<SaveIcon />} sx={{ mr: 1, minWidth: 150 }}>
+                Sauvegarder {tabKeyLabel || 'D7'}
+              </MainButton>
+              <MainButton color="primary" onClick={handleNext} disabled={currentIndex === stepsOrder.length - 1} endIcon={<NavigateNextIcon />} sx={{ minWidth: 120 }}>
+                Suivant
+              </MainButton>
             </Box>
          </Box>
       </Grid>
 
       {/* Zone de feedback utilisateur */}
-      <Snackbar open={saveFeedback.open} autoHideDuration={3000} onClose={handleCloseSnackbar} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
-        <Alert onClose={handleCloseSnackbar} severity={saveFeedback.severity} sx={{ width: '100%' }}>
-          {saveFeedback.message}
+      <Snackbar open={saveFeedback.open || !!apiStatus} autoHideDuration={3000} onClose={handleCloseSnackbar} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+        <Alert onClose={handleCloseSnackbar} severity={apiStatus === 'success' ? 'success' : apiStatus === 'error' ? 'error' : saveFeedback.severity} sx={{ width: '100%' }}>
+          {apiStatus === 'success' ? 'Sauvegarde réussie !' : apiStatus === 'error' ? 'Erreur lors de la sauvegarde. Veuillez réessayer.' : saveFeedback.message}
         </Alert>
       </Snackbar>
 
